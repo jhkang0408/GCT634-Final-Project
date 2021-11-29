@@ -39,10 +39,10 @@ class AudioEncoder(nn.Module):
         self.linear_std = nn.Linear(128, 128)
         
     def forward(self, x):
-
-        x = self.layer1(x.unsqueeze(0).unsqueeze(0))
+        #print("layer0",x.shape)
+        x = self.layer1(x.unsqueeze(1))
         #print("layer1",x.shape)
-        x = self.layer2(x)
+        x = self.layer2(x)  
         #print("layer2",x.shape)
         x = self.layer3(x)
         #print("layer3",x.shape)
