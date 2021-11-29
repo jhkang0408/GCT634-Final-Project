@@ -39,9 +39,10 @@ class AudioEncoder(nn.Module):
         self.linear_std = nn.Linear(128, 128)
         
     def forward(self, x):
-        #print("layer0",x.shape)
-        x = self.layer1(x.unsqueeze(1))
-        #print("layer1",x.shape)
+        x = self.spec(x)
+        x = self.to_db(x)
+        x = self.spec_bn(x.unsqueeze(1))
+        x = self.layer1(x)
         x = self.layer2(x)  
         #print("layer2",x.shape)
         x = self.layer3(x)
@@ -120,4 +121,3 @@ class Audio2ImageVAE(nn.Module):
         latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent)   
         return out, mean, logvar # torch.Size([3, 256, 256])
-
