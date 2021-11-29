@@ -4,7 +4,6 @@ class AudioEncoder(nn.Module):
     def __init__(self):
         super(AudioEncoder, self).__init__()
         
-
         '''
         input: audio wave
         output: latent vector
@@ -44,3 +43,20 @@ class ImageDecoder(nn.Module):
         out = x
         return out
 
+
+class Audio2ImageVAE(nn.Module):
+    def __init__(self):
+        super(ImageDecoder, self).__init__()
+
+        '''
+        input: audio wave
+        output:  RGB image
+        
+        '''
+
+    def forward(self, x):
+
+        latent = AudioEncoder(x)
+        #addtional sampling
+        out = ImageDecoder(latent)   
+        return out
