@@ -1,6 +1,9 @@
-import torch.nn as nn
+import torchaudio
 
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
 
 class Audio_block(nn.Module):
       def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, padding=1, pooling=2):
@@ -15,11 +18,11 @@ class Audio_block(nn.Module):
         return out
 
 class AudioEncoder(nn.Module):
-        '''
-        input: audio wave
-        output:  latent z torch.Size([1, 128])
-        '''
-      def __init__(self):
+    '''
+    input: audio wave
+    output:  latent z torch.Size([1, 128])
+    '''
+    def __init__(self):
         super(AudioEncoder, self).__init__()
 
         # Spectrogram
@@ -35,7 +38,7 @@ class AudioEncoder(nn.Module):
         self.linear_mean = nn.Linear(128, 128)
         self.linear_std = nn.Linear(128, 128)
         
-      def forward(self, x):
+    def forward(self, x):
 
         x = self.layer1(x.unsqueeze(0).unsqueeze(0))
         #print("layer1",x.shape)
@@ -99,19 +102,22 @@ class ImageDecoder(nn.Module):
 
 class Audio2ImageVAE(nn.Module):
     def __init__(self):
-        super(ImageDecoder, self).__init__()
+        super(Audio2ImageVAE, self).__init__()
         '''
         input: audio wave
         output:  RGB image / torch.Size([3, 256, 256])
         '''
-        self.AudioEncoder = 
-    def sampling(mean, logvar):
+        self.AudioEncoder = AudioEncoder()
+        self.ImageDecoder = ImageDecoder()
+
+    def sampling(self, mean, logvar):
         std = torch.exp(0.5 * logvar)
         eps = torch.randn_like(std)
         return eps * std + mean
 
     def forward(self, x):
         mean, logvar = self.AudioEncoder(x)
-        latent = sampling(mean, logvar)
+        latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent)   
-        return out # torch.Size([3, 256, 256])
+        return out, mean, logvar # torch.Size([3, 256, 256])
+
