@@ -35,27 +35,20 @@ class AudioEncoder(nn.Module):
         self.layer3 = Audio_block(input_channels = 64 * 2, output_channels = 64 * 2, kernel_size=3, stride=1, padding=1, pooling=3)
 
         self.final_pool = nn.AdaptiveAvgPool2d(1)   
-        self.linear_mean = nn.Linear(129, 128)
-        self.linear_std = nn.Linear(129, 128)
+        self.linear_mean = nn.Linear(128+13, 128)
+        self.linear_std = nn.Linear(128+13, 128)
         
     def forward(self, x , c):
         x = self.spec(x)
         x = self.to_db(x)
-        x = self.spec_bn(x.unsqueeze(1))
-        
-        
-        
-        #print("cat",x.shape)
+        x = self.spec_bn(x.unsqueeze(1))                        
         x = self.layer1(x)
-        #print("layer1",x.shape)
-        x = self.layer2(x)  
-        #print("layer2",x.shape)
+        x = self.layer2(x)
         x = self.layer3(x)
-        #print("layer3",x.shape)
         x = self.final_pool(x)
-        #print("final_pool",x.shape)
-        x = torch.cat([x, c.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)], 1)#add class information
-        #print("heere",x.shape)
+        c = (F.one_hot(c, num_classes=13)).unsqueeze(-1).unsqueeze(-1)
+        x = torch.cat([x, c], 1)#add class information
+        ## disentagle
         return self.linear_mean(x.squeeze(-1).squeeze(-1)), self.linear_std(x.squeeze(-1).squeeze(-1))
 
 
@@ -79,11 +72,11 @@ class ImageDecoder(nn.Module):
         output:  RGB image / torch.Size([3, 256, 256])
         '''
         super(ImageDecoder, self).__init__()
-        self.de_block1 = decoder_block(129 , 64)
+        self.de_block1 = decoder_block(128+13 , 64)
         self.de_block2 = decoder_block(64 , 32)
         
         # do upscaling
-        self.Upsample1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)           
+        self.Upsample1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)   
         self.de_block3 = decoder_block(32 , 16)
         self.de_block4 = decoder_block(16 , 8)
      
@@ -95,7 +88,9 @@ class ImageDecoder(nn.Module):
 
             
     def forward(self, x, c):
-        x = torch.cat([x, c.unsqueeze(-1)], 1)#add class information
+        ## disentagle
+        c = F.one_hot(c, num_classes=13)
+        x = torch.cat([x, c], 1)#add class information
         x = self.de_block1(x.unsqueeze(-1).unsqueeze(-1)) # torch.Size([1, 64, 2, 2])
         x = self.de_block2(x) # torch.Size([1, 32, 4, 4])
         x = self.Upsample1(x) # torch.Size([1, 32, 8, 8])
@@ -129,3 +124,9 @@ class Audio2ImageCVAE(nn.Module):
         latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent, c)   
         return out, mean, logvar # torch.Size([3, 256, 256])
+    
+    
+    
+    
+    
+    
