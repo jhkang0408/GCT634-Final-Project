@@ -41,25 +41,33 @@ class Runner(object):
         self.model.train() if mode is 'TRAIN' else self.model.eval()
 
         epoch_loss = 0
+        loss_NLL_function = nn.CrossEntropyLoss()
         #pbar = tqdm(dataloader, desc=f'{mode} Epoch {epoch:02}')  # progress bar
         #loop = tqdm(range(len(dataloader)))
-
+        
         #for item in pbar:
         for  iter, item in enumerate(dataloader):
         # Move mini-batch to the desired device.
             image, lms, label = item
             image = image.to(self.device) 
             lms = lms.to(self.device)
-            label = label.to(self.device)        
-            output, mean, std = self.model(lms, label) 
-            
+            label = label.to(self.device)
+            GT_label = F.one_hot(label, num_classes=13).type(torch.cuda.FloatTensor)                                    
+   
+            output, mean, std, class_pred = self.model(lms, label)
+
             # Compute the loss.
             loss = loss_function.loss_function(image, output, mean, std)
+            #loss_NLL = loss_NLL_function(class_pred, GT_label.detach())
+            loss_NLL = loss_NLL_function(class_pred, label.detach())
+            
+            total_loss = loss + loss_NLL
             if iter % 100 == 0:
-                print("[Epoch %d][Iter %d] [Train Loss: %.4f]" % (epoch, iter, loss))
+                #print(GT_label[0])
+                print("[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f]" % (epoch, iter, total_loss, loss, loss_NLL))
             if mode is 'TRAIN':
                 # Perform backward propagation to compute gradients.
-                loss.backward()
+                total_loss.backward()
                 # Update the parameters.
                 self.optimizer.step()
                 # Reset the computed gradients.
@@ -110,7 +118,7 @@ if __name__ == '__main__':
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
-    from model_updated import Audio2ImageCVAE
+    from model import Audio2ImageCVAE
     model = Audio2ImageCVAE()
     train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
 

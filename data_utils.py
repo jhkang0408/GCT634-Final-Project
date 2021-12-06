@@ -99,28 +99,21 @@ class SubURMP(Dataset):
                 violin:945    
     """
  
-    def __init__(self, root, train=True, imgtransform=None):
+    def __init__(self, root, train=True):
         super(SubURMP, self).__init__()
         self.root = root
-        if imgtransform == None:
-            self.imgtransform = torchvision.transforms.Compose([
-                                torchvision.transforms.Resize((256,256)),
-                                torchvision.transforms.ToTensor()
-                                ])
-        else:
-            self.imgtransform = imgtransform
         self.instruments = ['bassoon', 'cello', 'clarinet', 'double_bass', 'flute', 'horn', 'oboe', 'sax', 'trombone', 'trumpet', 'tuba', 'viola', 'violin']
         self.how_many_train = [1735, 9800, 8125, 1270, 5690, 5540, 4505, 7615, 8690, 1015, 3285, 6530, 7430]
         self.how_many_test = [390, 1030, 945, 1180, 925, 525, 390, 910, 805, 520, 525, 485, 945]
-        
+        self.imgtransform = torchvision.transforms.ToTensor()
         if train==True:
-          dummy_img_paths = [self.root+'Sub-URMP/img/train/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
-          dummy_chunk_paths = [self.root+'Sub-URMP/chunk/train/'+self.instruments[i]+'/'+str(j+1)+ '.wav' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
+          dummy_img_paths = [self.root+'Sub-URMP(processed)/IMG/train/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
+          dummy_lms_paths = [self.root+'Sub-URMP(processed)/LMS/train/'+self.instruments[i]+'/'+str(j+1)+ '.npy' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
         else:
-          dummy_img_paths = [self.root+'Sub-URMP/img/test/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
-          dummy_chunk_paths = [self.root+'Sub-URMP/chunk/test/'+self.instruments[i]+'/'+str(j+1)+ '.wav' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
+          dummy_img_paths = [self.root+'Sub-URMP(processed)/IMG/test/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
+          dummy_lms_paths = [self.root+'Sub-URMP(processed)/LMS/test/'+self.instruments[i]+'/'+str(j+1)+ '.npy' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
         self.img_paths = dummy_img_paths
-        self.chunk_paths = dummy_chunk_paths
+        self.lms_paths = dummy_lms_paths
         
         assert isinstance(self.img_paths, list), 'Wrong type. self.paths should be list.'
         if train is True:
@@ -130,33 +123,23 @@ class SubURMP(Dataset):
         
     def __getitem__(self, idx):        
         img_path = self.img_paths[idx]
-        chunk_path = self.chunk_paths[idx]
-        class_label = (self.instruments).index(img_path.split('/')[7])
+        lms_path = self.lms_paths[idx]
+        class_label = (self.instruments).index(img_path.split('/')[len(img_path.split('/'))-2])
         label = torch.tensor(class_label).long()
         
-        # img: (1080, 1920) -> (256, 256)
-        image = Image.open(img_path)
-        if self.imgtransform is not None:
-            image = self.imgtransform(image) 
-       
-        # wav: sr 44.1KHz, 16 bits, stereo
-        chunk, sr = torchaudio.load(chunk_path)               
+        img = self.imgtransform(Image.open(img_path))
+        lms = torch.from_numpy(np.load(lms_path))
         
-        return image, chunk[0], label
+        return img, lms, label
     
     def __len__(self):
         return len(self.img_paths)
 
 
-def get_dataloader(dataroot, batch_size):
-    imgtransform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize((256,256)),
-        torchvision.transforms.ToTensor(),
-        ])    
- 
-    train_dataset = SubURMP(dataroot, train=True, imgtransform=imgtransform)    
+def get_dataloader(dataroot, batch_size): 
+    train_dataset = SubURMP(dataroot, train=True)    
     train_dataset, valid_dataset = random_split(train_dataset, [int(len(train_dataset) * 0.80), len(train_dataset)-int(len(train_dataset) * 0.80)])
-    test_dataset = SubURMP(dataroot, train=False, imgtransform=imgtransform)
+    test_dataset = SubURMP(dataroot, train=False)
     
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
