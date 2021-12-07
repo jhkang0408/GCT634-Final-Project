@@ -23,6 +23,7 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 experiment/
+dataset/
 *.egg-info/
 .installed.cfg
 *.egg
