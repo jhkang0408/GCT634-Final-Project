@@ -69,6 +69,10 @@ class Runner(object):
             lms = lms.to(self.device)
             label = label.to(self.device)
             
+            self.encoder.zero_grad()
+            self.decoder.zero_grad()
+            self.discriminator.zero_grad()   
+            
             # Reconstruction
             #################################################################################
             audio_latent, class_pred = self.encoder(lms, label)
@@ -77,7 +81,7 @@ class Runner(object):
             loss_reconstruction = F.mse_loss(output, image) 
             loss_classification = loss_NLL_function(class_pred, label.detach())
             
-            if mode is 'TRAIN': 
+            if mode is 'TRAIN':
                 (loss_reconstruction + loss_classification).backward()
                 self.optim_decoder.step()
                 self.optim_encoder.step()
@@ -91,7 +95,7 @@ class Runner(object):
             audio_latent_fake_gauss, _ = self.encoder(lms, label)
             fake_gauss = self.discriminator(audio_latent_fake_gauss)
             
-            loss_discrimination = -torch.mean(torch.log(real_gauss + self.EPS) + torch.log(1 - fake_gauss + self.EPS))
+            loss_discrimination = 0.1 * -torch.mean(torch.log(real_gauss + self.EPS) + torch.log(1 - fake_gauss + self.EPS))
             
             if mode is 'TRAIN': 
                 loss_discrimination.backward() 
@@ -104,7 +108,7 @@ class Runner(object):
             audio_latent_fake_gauss, _ = self.encoder(lms, label) 
             fake_gauss = self.discriminator(audio_latent_fake_gauss)
             
-            loss_generation = -torch.mean(torch.log(fake_gauss + self.EPS))
+            loss_generation = 0.1 * -torch.mean(torch.log(fake_gauss + self.EPS))
             if mode is 'TRAIN': 
                 loss_generation.backward()
                 self.optim_encoder_gen.step()

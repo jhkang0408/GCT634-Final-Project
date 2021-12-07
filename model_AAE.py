@@ -1,194 +1,160 @@
-from PIL import Image
-from tqdm import tqdm
-from pathlib import Path
-import time
-import os
-import numpy as np
-#os.environ['KMP_DUPLICATE_LIB_OK']='True'
-
-import matplotlib
-#%matplotlib inline
-import matplotlib.pyplot as plt
-import IPython.display as ipd
-from tqdm.notebook import tqdm 
-
 import torchaudio
-import torchvision
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch.utils.data.dataset import random_split
-from torch.autograd import Variable
 
-import data_utils
-import utils
 
-class Runner(object):
-    def __init__(self, encoder, decoder, discriminator, lr, sr):        
-        self.learning_rate = lr
-        self.stopping_rate = sr
-        self.EPS = 1e-15        
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')  
-        # encoder, decoder, discriminator
-        self.encoder = encoder.to(self.device)
-        self.decoder = decoder.to(self.device)
-        self.discriminator = discriminator.to(self.device)
-        # encoder/decoder optimizers
-        self.optim_encoder = torch.optim.Adam(encoder.parameters(), lr=lr) 
-        self.optim_decoder = torch.optim.Adam(decoder.parameters(), lr=lr)  
-        # regularizer optimizers
-        self.optim_encoder_gen = torch.optim.Adam(encoder.parameters(), lr=lr/2)
-        self.optim_discriminator = torch.optim.Adam(discriminator.parameters(), lr=lr/2) 
-        
-        #self.scheduler = ReduceLROnPlateau(self.optim_encoder, mode='min', factor=0.1, patience=10, verbose=True)
-             
-        
-    # Running model for train, test and validation. mode: 'train' for training, 'eval' for validation and test
-    def run(self, dataloader, epoch, mode='TRAIN'):
-        if mode=='TRAIN':
-            self.encoder.train()        
-            self.decoder.train()
-            self.discriminator.train()
-        else :
-            self.encoder.eval()
-            self.decoder.eval()
-            self.discriminator.eval()    
+class Classification_Branch(nn.Module):
+    def __init__(self, input_dim = 128, output_class = 13):
+        super(Classification_Branch, self).__init__()
+        self.linear1 = nn.Linear(input_dim, 128)
+        self.relu1 = nn.ReLU()
+        self.linear2 = nn.Linear(128, 128)
+        self.relu2 = nn.ReLU()
+        self.linear_last = nn.Linear(128, output_class)
+        #self.LogSoftMax = nn.LogSoftmax()
+      
+    def forward(self, x):
+        #print(": ", x.shape)
+        x = self.relu1(self.linear1(x.squeeze(-1).squeeze(-1)))
+        x = self.relu2(self.linear2(x))
+        #x = self.LogSoftMax(self.linear_last(x))
+        x = self.linear_last(x)
+        return x
 
-        epoch_loss = 0
-        loss_NLL_function = nn.CrossEntropyLoss()
-        
-        #for item in pbar:
-        for  iter, item in enumerate(dataloader):
-        # Move mini-batch to the desired device.
-            image, lms, label = item
-            
-            image = image.to(self.device) 
-            lms = lms.to(self.device)
-            label = label.to(self.device)
-            
-            self.encoder.zero_grad()
-            self.decoder.zero_grad()
-            self.discriminator.zero_grad()   
-            
-            # Reconstruction
-            #################################################################################
-            audio_latent, class_pred = self.encoder(lms, label)
-            output = self.decoder(audio_latent, class_pred)
-            
-            loss_reconstruction = F.mse_loss(output, image) 
-            loss_classification = loss_NLL_function(class_pred, label.detach())
-            
-            if mode is 'TRAIN':
-                (loss_reconstruction + loss_classification).backward()
-                self.optim_decoder.step()
-                self.optim_encoder.step()
-            #################################################################################
-            
-            # Discrimination
-            #################################################################################
-            self.encoder.eval()
-            audio_latent_real_gauss = Variable(torch.randn(image.size()[0], 128) * 1.).cuda()
-            real_gauss = self.discriminator(audio_latent_real_gauss)            
-            audio_latent_fake_gauss, _ = self.encoder(lms, label)
-            fake_gauss = self.discriminator(audio_latent_fake_gauss)
-            
-            loss_discrimination = 0.1 * -torch.mean(torch.log(real_gauss + self.EPS) + torch.log(1 - fake_gauss + self.EPS))
-            
-            if mode is 'TRAIN': 
-                loss_discrimination.backward() 
-                self.optim_discriminator.step()                            
-            #################################################################################
-            
-            # Generation
-            ################################################################################# 
-            self.encoder.train()
-            audio_latent_fake_gauss, _ = self.encoder(lms, label) 
-            fake_gauss = self.discriminator(audio_latent_fake_gauss)
-            
-            loss_generation = 0.1 * -torch.mean(torch.log(fake_gauss + self.EPS))
-            if mode is 'TRAIN': 
-                loss_generation.backward()
-                self.optim_encoder_gen.step()
-            #################################################################################  
-                                   
-            total_loss = loss_reconstruction + loss_classification + loss_discrimination + loss_generation            
-            
-            if iter % 100 == 0:
-                print("[Epoch %d][Iter %d] [Train Loss: %.4f] [Reconstruction Loss: %.4f] [Classification Loss: %.4f]" % (epoch, iter, total_loss, loss_reconstruction, loss_classification))                                  
-            
-            batch_size = image.shape[0]
-            epoch_loss += batch_size * total_loss.item()
-            
-        epoch_loss = epoch_loss / len(dataloader.dataset)
-        return epoch_loss, output, image
 
-    def test(self, dataloader):
-        epoch_loss = 0
-        return epoch_loss
+class Audio_block(nn.Module):
+      def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, padding=1, pooling=2):
+        super(Audio_block, self).__init__()
+        self.conv = nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.bn = nn.BatchNorm2d(output_channels)
+        self.relu = nn.ReLU()
+        self.mp = nn.MaxPool2d(kernel_size=pooling, stride=pooling)
     
+      def forward(self, x):
+        out = self.mp(self.relu(self.bn(self.conv(x))))
+        return out
+
+    
+class AudioEncoder(nn.Module):
     '''
-    def early_stop(self, loss, epoch):
-        self.scheduler.step(loss, epoch)
-        self.learning_rate = self.optimizer.param_groups[0]['lr']
-        stop = self.learning_rate < self.stopping_rate
-        return stop
+    input: audio wave
+    output:  latent z torch.Size([1, 128])
     '''
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('--name', type=str)
-parser.add_argument('--datasetPath', type=str, default='./dataset/')
-parser.add_argument('--saveDir', type=str, default='./experiment')
-parser.add_argument('--gpu', type=str, default='0', help='gpu')
-parser.add_argument('--numEpoch', type=int, default=10, help='input batch size for training')
-parser.add_argument('--batchSize', type=int, default=16, help='input batch size for training')
-parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
-parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')
-args = parser.parse_args()
+    def __init__(self):
+        super(AudioEncoder, self).__init__()
+        self.spec_bn = nn.BatchNorm2d(1)
 
-## basic run command : python train --name temp 
+        self.layer1 = Audio_block(input_channels = 1, output_channels = 64, kernel_size=3, stride=1, padding=1, pooling=4)
+        self.layer2 = Audio_block(input_channels = 64, output_channels = 64 * 2, kernel_size=3, stride=1, padding=1, pooling=3)
+        self.layer3 = Audio_block(input_channels = 64 * 2, output_channels = 64 * 2, kernel_size=3, stride=1, padding=1, pooling=3)
 
-if __name__ == '__main__':
-    
-    #gpu setup.
-    os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
-
-    # Training setup.
-    LR = args.lr  # learning rate
-    SR = args.sr  # stopping rate
-    NUM_EPOCHS = args.numEpoch
-    BATCH_SIZE = args.batchSize
-    Dataset_Path = args.datasetPath
-
-    #Logging setup.
-    save = utils.SaveUtils(args, args.name)
-
-    from model import AudioEncoder
-    from model import ImageDecoder
-    from model import Discriminator
-    encoder = AudioEncoder()
-    decoder = ImageDecoder()
-    discriminator = Discriminator()
-    
-    train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
-
-    runner = Runner(encoder=encoder, decoder=decoder, discriminator=discriminator, lr = LR, sr = SR)
-    start = time.time()
-    for epoch in range(NUM_EPOCHS):
-        train_loss, _, _ = runner.run(train_dataloader, epoch, 'TRAIN')
-        valid_loss, output_image, gt = runner.run(valid_dataloader, epoch, 'VALID')
-
-        log = "[Epoch %d/%d] [Train Loss: %.4f] [Valid Loss: %.4f]" % (epoch + 1, NUM_EPOCHS, train_loss, valid_loss)
+        self.final_pool = nn.AdaptiveAvgPool2d(1)   
+        self.linear = nn.Linear(128+13, 128)
+        # classification branch
+        self.classification_branch  = Classification_Branch()
         
-        #save.save_model(model, epoch)
-        save.save_image(gt, output_image, epoch)
-        save.save_log(log)
-        print(log)
+    def forward(self, x , c):
+        x = self.spec_bn(x.unsqueeze(1))                        
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.final_pool(x)        
+        class_pred = self.classification_branch(x)
+        x = torch.cat([x, class_pred.unsqueeze(-1).unsqueeze(-1)], 1)#add class information
+        return self.linear(x.squeeze(-1).squeeze(-1)), class_pred
+
+
+class decoder_block(nn.Module):
+    def __init__(self, InChannel, OutChannel):
+        super(decoder_block, self).__init__()
+        self.ConvTrans = nn.ConvTranspose2d(InChannel, OutChannel, 4, 2, 1, bias=False)
+        self.BN = nn.BatchNorm2d(OutChannel)
+        self.ReLU = nn.ReLU(True)
+            
+    def forward(self, x):
+        x = self.ConvTrans(x)
+        x = self.BN(x)
+        x = self.ReLU(x)
+        return x
+
+    
+class ImageDecoder(nn.Module):
+    def __init__(self):
         '''
-        if runner.early_stop(valid_loss, epoch + 1):
-            break
+        input: latent z torch.Size([1, 128])
+        output:  RGB image / torch.Size([3, 256, 256])
         '''
-    print("Execution time: "+str(time.time()-start))
+        super(ImageDecoder, self).__init__()
+        self.de_block1 = decoder_block(128+13 , 64)
+        self.de_block2 = decoder_block(64 , 32)
+        
+        # do upscaling
+        self.Upsample1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)   
+        self.de_block3 = decoder_block(32 , 16)
+        self.de_block4 = decoder_block(16 , 8)
+     
+        # do upscaling
+        self.Upsample2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  
+        self.de_block5 = decoder_block(8 , 4)
+        self.de_block6 = decoder_block(4 , 3)
+        self.last_conv = nn.Conv2d(3, 3, kernel_size= 3, padding= 1)
+
+            
+    def forward(self, x, class_pred):
+        ## disentagle
+        #c = F.one_hot(c, num_classes=13)
+        x = torch.cat([x, class_pred], 1)#add class information
+        x = self.de_block1(x.unsqueeze(-1).unsqueeze(-1)) # torch.Size([1, 64, 2, 2])
+        x = self.de_block2(x) # torch.Size([1, 32, 4, 4])
+        x = self.Upsample1(x) # torch.Size([1, 32, 8, 8])
+        x = self.de_block3(x) # torch.Size([1, 16, 16, 16])
+        x = self.de_block4(x) # torch.Size([1, 8, 32, 32])
+        x = self.Upsample2(x) # torch.Size([1, 8, 64, 64])
+        x = self.de_block5(x) # torch.Size([1, 4, 128, 128])
+        x = self.de_block6(x) # torch.Size([1, 3, 256, 256])
+
+        x = self.last_conv(x)
+        return x
+
+
+class Audio2ImageCVAE(nn.Module):
+    def __init__(self):
+        super(Audio2ImageCVAE, self).__init__()
+        '''
+        input: audio wave
+        output:  RGB image / torch.Size([3, 256, 256])
+        '''
+        self.AudioEncoder = AudioEncoder()
+        self.ImageDecoder = ImageDecoder()
+
+    def sampling(self, mean, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mean
+
+    def forward(self, x, c):
+        mean, logvar, class_pred = self.AudioEncoder(x, c)
+        latent = self.sampling(mean, logvar)
+        out = self.ImageDecoder(latent, class_pred)
+        return out, mean, logvar, class_pred # torch.Size([3, 256, 256])
+    
+    
+class Discriminator(nn.Module):
+    def __init__(self):
+        super(Discriminator, self).__init__()
+        self.lin1 = nn.Linear(128, 128)
+        self.lin2 = nn.Linear(128, 64)        
+        self.lin3 = nn.Linear(64, 1)
+        self.relu1 = nn.ReLU(True)
+        self.relu2 = nn.ReLU(True)        
+        self.sigmo = nn.Sigmoid()
+        
+    def forward(self, x):
+        x = self.lin1(x)
+        x = self.relu1(x)
+        x = self.lin2(x)
+        x = self.relu2(x)
+        x = self.lin3(x)
+        return self.sigmo(x)  
