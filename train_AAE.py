@@ -154,7 +154,7 @@ if __name__ == '__main__':
     
     #gpu setup.
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
     # Training setup.
     LR = args.lr  # learning rate
@@ -166,9 +166,9 @@ if __name__ == '__main__':
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
-    from model import AudioEncoder
-    from model import ImageDecoder
-    from model import Discriminator
+    from model_AAE import AudioEncoder
+    from model_AAE import ImageDecoder
+    from model_AAE import Discriminator
     encoder = AudioEncoder()
     decoder = ImageDecoder()
     discriminator = Discriminator()
