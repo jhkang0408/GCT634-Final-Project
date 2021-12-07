@@ -184,30 +184,35 @@ class AudNet(nn.Module):
 
         super(AudNet, self).__init__()
 
+        self.spec_bn = nn.BatchNorm2d(1)
+
         out_ch = [64, 128, 256, 512]
         #for spectrogram features as mentioned in Objects that Sound paper
-        self.c1 = BasicBlock(in_ch=1, out_ch=out_ch[0], stride=2, ps=2) 
+        self.c1 = BasicBlock(in_ch=1, out_ch=out_ch[0], stride=2, ps=2, norm=norm) 
         self.c2 = BasicBlock(in_ch=out_ch[0], out_ch=out_ch[1], stride=1, ps=2, norm=norm)
         self.c3 = BasicBlock(in_ch=out_ch[1], out_ch=out_ch[2], stride=1, ps=2, norm=norm)
         self.c4 = BasicBlock(in_ch=out_ch[2], out_ch=out_ch[3], stride=1, ps=2, norm=norm)
         self.pool1 = nn.MaxPool2d(kernel_size=(1,2), stride=(1,2))
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.pool_final = nn.MaxPool2d(kernel_size=(16, 12), stride=(16, 12))
+        self.pool_final = nn.MaxPool2d(kernel_size=(16, 2), stride=(16, 2))
 
 
         fc_dim = 128
         self.norm = F.normalize
         self.embed = nn.Sequential(
-            nn.Linear(512, fc_dim),
+            nn.Linear(512, fc_dim+13),
             getNonLinear("relu"),
             nn.Linear(fc_dim+13, fc_dim)
             )
-
+        self.linear = nn.Linear(128+13, 128)
         self.classification_branch  = Classification_Branch()
       
   def forward(self, x):
-     
+        #print("input features", x.shape)
+        x = self.spec_bn(x.unsqueeze(1))    
+        #print("spec_bn features", x.shape)
         #conv features
+        
         out = self.c1(x)
         #print("c1 features", out.shape)
         out = self.pool1(out)
@@ -237,9 +242,9 @@ class AudNet(nn.Module):
         #print("norm:", out.shape)
 
         class_pred = self.classification_branch(out)
-        out = torch.cat([out, class_pred.unsqueeze(-1).unsqueeze(-1)], 1)#add class information
+        out = torch.cat([out, class_pred], 1)#add class information
         
-        return self.linear(x.squeeze(-1).squeeze(-1)), class_pred
+        return self.linear(out), class_pred
 
 #+==================================================================================
 

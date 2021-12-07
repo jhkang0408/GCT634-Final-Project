@@ -75,7 +75,7 @@ class Runner(object):
             
             # Reconstruction
             #################################################################################
-            audio_latent, class_pred = self.encoder(lms, label)
+            audio_latent, class_pred = self.encoder(lms) #, label
             output = self.decoder(audio_latent, class_pred)
             
             loss_reconstruction = F.mse_loss(output, image) 
@@ -92,7 +92,7 @@ class Runner(object):
             self.encoder.eval()
             audio_latent_real_gauss = Variable(torch.randn(image.size()[0], 128) * 1.).cuda()
             real_gauss = self.discriminator(audio_latent_real_gauss)            
-            audio_latent_fake_gauss, _ = self.encoder(lms, label)
+            audio_latent_fake_gauss, _ = self.encoder(lms)#, label
             fake_gauss = self.discriminator(audio_latent_fake_gauss)
             
             loss_discrimination = 0.1 * -torch.mean(torch.log(real_gauss + self.EPS) + torch.log(1 - fake_gauss + self.EPS))
@@ -105,7 +105,7 @@ class Runner(object):
             # Generation
             ################################################################################# 
             self.encoder.train()
-            audio_latent_fake_gauss, _ = self.encoder(lms, label) 
+            audio_latent_fake_gauss, _ = self.encoder(lms) #,label
             fake_gauss = self.discriminator(audio_latent_fake_gauss)
             
             loss_generation = 0.1 * -torch.mean(torch.log(fake_gauss + self.EPS))
@@ -167,9 +167,11 @@ if __name__ == '__main__':
     save = utils.SaveUtils(args, args.name)
 
     from model_AAE import AudioEncoder
+    from model_AAE import AudNet
     from model_AAE import ImageDecoder
     from model_AAE import Discriminator
-    encoder = AudioEncoder()
+    #encoder = AudioEncoder()
+    encoder = AudNet(norm="bn")
     decoder = ImageDecoder()
     discriminator = Discriminator()
     
