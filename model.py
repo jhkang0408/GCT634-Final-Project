@@ -126,6 +126,141 @@ class ImageDecoder(nn.Module):
         x = self.last_conv(x)
         return x
 
+#============================NEW EMBEDDING AVE==================================================
+
+def getNonLinear(nlu):
+
+    if nlu == "relu":
+       return nn.ReLU(inplace=True)
+    elif nlu == "glu": #gated linear unit
+       return F.glu
+    else:
+       return None
+   
+def getNorm(norm):
+
+    if norm =="bn": #default batchnorm
+       return nn.BatchNorm2d
+    else:
+       return None
+   
+def Conv3x3(in_ch, out_ch, stride):
+    """ 3x3 convolution with padding """
+    conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=3, stride=stride, 
+                     padding=1)
+    
+    return conv
+
+def Conv1x1(in_ch, out_ch, stride=1):
+    """ 1x1 convolution """
+    conv = nn.Conv2d(in_channels=in_ch, out_channels=out_ch, kernel_size=1, stride=stride, bias=False)
+    return conv
+
+class BasicBlock(nn.Module):
+  """ Basic conv block"""
+  
+  def __init__(self, in_ch, out_ch, stride, ps, norm):
+    
+      super(BasicBlock, self).__init__()
+
+      norm_fn = getNorm(norm)  
+
+      self.conv1 = Conv3x3(in_ch, out_ch, stride)
+      self.bn1 = norm_fn(out_ch)
+        
+      self.conv2 = Conv3x3(out_ch, out_ch, stride=1)
+      self.bn2 = norm_fn(out_ch)
+
+      self.relu = getNonLinear("relu")
+
+  def forward(self, x):
+    
+      out = self.conv1(x)
+      out = self.bn1(out)
+      out = self.relu(out)
+
+      out = self.conv2(out)
+      out = self.bn2(out)
+      out = self.relu(out)
+
+      return out
+
+class AudNet(nn.Module):
+  """ Audio subnet """
+
+  def __init__(self, norm, init_wts=True):
+
+        super(AudNet, self).__init__()
+
+        self.spec_bn = nn.BatchNorm2d(1)
+
+        out_ch = [64, 128, 256, 512]
+        #for spectrogram features as mentioned in Objects that Sound paper
+        self.c1 = BasicBlock(in_ch=1, out_ch=out_ch[0], stride=2, ps=2, norm=norm) 
+        self.c2 = BasicBlock(in_ch=out_ch[0], out_ch=out_ch[1], stride=1, ps=2, norm=norm)
+        self.c3 = BasicBlock(in_ch=out_ch[1], out_ch=out_ch[2], stride=1, ps=2, norm=norm)
+        self.c4 = BasicBlock(in_ch=out_ch[2], out_ch=out_ch[3], stride=1, ps=2, norm=norm)
+        self.pool1 = nn.MaxPool2d(kernel_size=(1,2), stride=(1,2))
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.pool_final = nn.MaxPool2d(kernel_size=(16, 2), stride=(16, 2))
+
+
+        fc_dim = 128
+        class_num=13
+        self.norm = F.normalize
+        self.embed = nn.Sequential(
+            nn.Linear(512, fc_dim+class_num),
+            getNonLinear("relu"),
+            nn.Linear(fc_dim+class_num, fc_dim)
+            )
+
+        self.linear_mean = nn.Linear(128+13, 128)
+        self.linear_std = nn.Linear(128+13, 128)
+        self.classification_branch  = Classification_Branch()
+      
+  def forward(self, x):
+        #print("input features", x.shape)
+        x = self.spec_bn(x.unsqueeze(1))    
+        #print("spec_bn features", x.shape)
+        #conv features
+        
+        out = self.c1(x)
+        #print("c1 features", out.shape)
+        out = self.pool1(out)
+        #print("p1 features", out.shape)
+        out = self.c2(out)
+        #print("c2 features", out.shape)
+        out = self.pool(out)
+        #print("p2 features", out.shape)
+        out = self.c3(out)
+        #print("c3 features", out.shape)
+        out = self.pool(out)
+        #print("p3 features", out.shape)
+        out = self.c4(out)
+        #print("c4 features", out.shape)
+        out = self.pool_final(out)
+        #print("aud features:", out.shape)
+
+        out = out.view(out.shape[0], -1)
+        #print("flatten:", out.shape)
+
+        #conv embeddings
+        out = self.embed(out)
+        #print("embed:", out.shape)
+
+        #normalize embeddings to length=1
+        out = self.norm(out, p=2, dim=1)
+        #print("norm:", out.shape)
+
+        class_pred = self.classification_branch(out)
+        #print("norm:", out.shape)
+        out = torch.cat([out, class_pred], 1)#add class information
+        
+        return self.linear_mean(out), self.linear_std(out), class_pred
+
+#+==================================================================================
+
+
 
 class Audio2ImageCVAE(nn.Module):
     def __init__(self):
@@ -134,7 +269,8 @@ class Audio2ImageCVAE(nn.Module):
         input: audio wave
         output:  RGB image / torch.Size([3, 256, 256])
         '''
-        self.AudioEncoder = AudioEncoder()
+        #self.AudioEncoder = AudioEncoder()
+        self.AudioEncoder = AudNet(norm="bn")
         self.ImageDecoder = ImageDecoder()
 
     def sampling(self, mean, logvar):
@@ -142,8 +278,8 @@ class Audio2ImageCVAE(nn.Module):
         eps = torch.randn_like(std)
         return eps * std + mean
 
-    def forward(self, x, c):
-        mean, logvar, class_pred = self.AudioEncoder(x, c)
+    def forward(self, x):
+        mean, logvar, class_pred = self.AudioEncoder(x)
         latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent, class_pred)
         return out, mean, logvar, class_pred # torch.Size([3, 256, 256])

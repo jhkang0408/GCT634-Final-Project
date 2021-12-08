@@ -54,7 +54,7 @@ class Runner(object):
             label = label.to(self.device)
             GT_label = F.one_hot(label, num_classes=13).type(torch.cuda.FloatTensor)                                    
    
-            output, mean, std, class_pred = self.model(lms, label)
+            output, mean, std, class_pred = self.model(lms)
 
             # Compute the loss.
             loss = loss_function.loss_function(image, output, mean, std)
@@ -94,7 +94,7 @@ parser.add_argument('--name', type=str)
 parser.add_argument('--datasetPath', type=str, default='./dataset/')
 parser.add_argument('--saveDir', type=str, default='./experiment')
 parser.add_argument('--gpu', type=str, default='0', help='gpu')
-parser.add_argument('--numEpoch', type=int, default=10, help='input batch size for training')
+parser.add_argument('--numEpoch', type=int, default=50, help='input batch size for training')
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size for training')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     
     #gpu setup.
     os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   
-    os.environ["CUDA_VISIBLE_DEVICES"]=args.gpu
+    os.environ["CUDA_VISIBLE_DEVICES"]="2"
 
     # Training setup.
     LR = args.lr  # learning rate
