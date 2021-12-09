@@ -100,7 +100,7 @@ class Runner(object):
             #CE the class prediction
             loss_NLL = loss_NLL_function(class_pred, label.detach())
 
-            total_loss = loss_VAE + loss_NLL + loss_G
+            total_loss = loss_VAE + loss_NLL + 0.01 * loss_G
             if mode is 'TRAIN':
                 # Perform backward propagation to compute gradients.
                 total_loss.backward()
