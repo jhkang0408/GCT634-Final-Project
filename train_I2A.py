@@ -27,6 +27,8 @@ import loss_function
 import data_utils
 import utils
 
+
+
 class Runner(object):
     def __init__(self, model, lr, sr, save):
         self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -80,7 +82,7 @@ class Runner(object):
             batch_size = image.shape[0]
             epoch_loss += batch_size * loss.item()
         epoch_loss = epoch_loss / len(dataloader.dataset)
-        return epoch_loss, output, image
+        return epoch_loss, output, lms
 
     def test(self, dataloader):
         epoch_loss = 0
@@ -135,7 +137,8 @@ if __name__ == '__main__':
         log = "[Epoch %d/%d] [Train Loss: %.4f] [Valid Loss: %.4f]" % (epoch + 1, NUM_EPOCHS, train_loss, valid_loss)
         
         save.save_model(model, epoch)
-        save.save_image(gt, output_image, epoch)
+        #save.save_image(gt, output_image, epoch)
+        save.save_mel(gt[0].cpu().detach().numpy(), output_image[0].cpu().detach().numpy(), epoch)
         save.save_log(log)
         print(log)
 

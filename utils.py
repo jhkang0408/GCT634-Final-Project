@@ -4,6 +4,13 @@ import torch
 import sys
 from torchvision.utils import save_image
 
+import librosa
+import librosa.display
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+import seaborn as sns
 class SaveUtils():
     def __init__(self, args, name):
         self.args = args
@@ -35,3 +42,15 @@ class SaveUtils():
     def save_image(self, gt, fake, epoch):
         save_image(gt, self.save_dir_image +'/gt_img_'+ str(epoch) +'.png')    
         save_image(fake, self.save_dir_image +'/output_img_'+ str(epoch) +'.png')
+    
+    def save_mel(self,gt, fake, epoch):
+        #print(gt.shape)
+        gt = Image.fromarray(np.uint8(gt * 255))
+        if gt.mode != 'RGB':
+            gt = gt.convert('RGB')
+        gt.save(self.save_dir_image +'/gt_mel_'+ str(epoch) +'.png')
+        
+        fake = Image.fromarray(np.uint8(fake * 255 )) 
+        if fake.mode != 'RGB':
+            fake = fake.convert('RGB')      
+        fake.save(self.save_dir_image +'/output_mel_'+ str(epoch) +'.png')
