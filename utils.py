@@ -10,7 +10,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-import seaborn as sns
+#import seaborn as sns
 class SaveUtils():
     def __init__(self, args, name):
         self.args = args

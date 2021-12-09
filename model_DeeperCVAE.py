@@ -157,7 +157,6 @@ class ImageDecoder(nn.Module):
         x = self.conv_block2_2(x)
 
         x = self.Upsample1(x) # torch.Size([1, 64, 8, 8])
-       
         x = self.de_block3(x) # torch.Size([1, 32, 16, 16])
         x = self.conv_block3_1(x)
         x = self.conv_block3_2(x)
