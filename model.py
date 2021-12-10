@@ -219,7 +219,7 @@ class AudNet(nn.Module):
         self.classification_branch  = Classification_Branch()
       
   def forward(self, x):
-        #print("input features", x.shape)
+        
         x = self.spec_bn(x.unsqueeze(1))    
         #print("spec_bn features", x.shape)
         #conv features
