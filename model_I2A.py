@@ -169,7 +169,9 @@ class AudioDecoder(nn.Module):
         #self.de_block6 = decoder_block(16 , 16)
         self.Upsample3 = nn.Upsample(size=(128,44), mode='bilinear', align_corners=True)  
         self.conv_block5_2 = decoder_conv_block(input_channels = 16, output_channels = 16)
-        self.last_conv = nn.Conv2d(16, 1, kernel_size= 3, padding= 1)
+        self.last_conv1 = nn.Conv2d(16, 64, kernel_size= 3, padding= 1)
+        self.last_conv2 = nn.Conv2d(64, 32, kernel_size= 3, padding= 1)
+        self.last_conv3 = nn.Conv2d(32, 1, kernel_size= 3, padding= 1)
 
             
     def forward(self, x, class_pred):
@@ -200,8 +202,10 @@ class AudioDecoder(nn.Module):
         x = self.conv_block5_1(x)
         x = self.Upsample3(x) 
         x = self.conv_block5_2(x)
-        x = self.last_conv(x)
-        #print(x.shape)
+        x = self.last_conv1(x)
+        x = self.last_conv2(x)
+        x = self.last_conv3(x)
+        
         return x.squeeze(1)
 
 class ImageDecoder(nn.Module):
@@ -287,9 +291,6 @@ class Audio2ImageCVAE(nn.Module):
         latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent, class_pred)
         return out, mean, logvar, class_pred # torch.Size([3, 256, 256])
-    
-    
-    
     
     
     
