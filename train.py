@@ -28,7 +28,7 @@ import data_utils
 import utils
 
 class Runner(object):
-    def __init__(self, model, lr, sr):
+    def __init__(self, model, lr, sr, save):
         self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
         self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, verbose=True)
         self.learning_rate = lr
@@ -64,7 +64,10 @@ class Runner(object):
             total_loss = loss + loss_NLL
             if iter % 100 == 0:
                 #print(GT_label[0])
-                print("[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f]" % (epoch, iter, total_loss, loss, loss_NLL))
+                log = "[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f]" % (epoch, iter, total_loss, loss, loss_NLL)
+                print(log)
+                save.save_log(log)
+
             if mode is 'TRAIN':
                 # Perform backward propagation to compute gradients.
                 total_loss.backward()
@@ -122,7 +125,7 @@ if __name__ == '__main__':
     model = Audio2ImageCVAE()
     train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
 
-    runner = Runner(model=model, lr = LR, sr = SR)
+    runner = Runner(model=model, lr = LR, sr = SR, save = save)
     start = time.time()
     for epoch in range(NUM_EPOCHS):
         train_loss, _, _ = runner.run(train_dataloader, epoch, 'TRAIN')

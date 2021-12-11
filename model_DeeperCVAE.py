@@ -37,35 +37,6 @@ class Con2d_block(nn.Module):
         out = self.mp(self.relu(self.bn(self.conv(x))))
         return out
 
-class ImageEncoder(nn.Module):
-    def __init__(self):
-        super(ImageEncoder, self).__init__()
-        self.layer1 = Con2d_block(input_channels = 3, output_channels = 64, kernel_size=3, stride=1, padding=1, pooling=2)
-        self.layer2 = Con2d_block(input_channels = 64, output_channels = 64 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
-        self.layer3 = Con2d_block(input_channels = 64 * 2, output_channels = 64 * 2 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
-        self.layer4 = Con2d_block(input_channels = 64 * 2 * 2, output_channels = 64 * 2 * 2 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
-        self.layer5 = Con2d_block(input_channels = 64 * 2 * 2 * 2, output_channels = 64 * 2 * 2 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
-        self.final_fc = nn.Linear(16, 1)
-        self.linear_mean = nn.Linear(512+13, 128)
-        self.linear_std = nn.Linear(512+13, 128)
-        self.classification_branch  = Classification_Branch(input_dim = 512)
-    def forward(self, x , c):
-        x = self.layer1(x)
-        #print("layer1", x.shape)
-        x = self.layer2(x)
-        #print("layer2", x.shape)
-        x = self.layer3(x)
-        #print("layer3", x.shape)
-        x = self.layer4(x)
-        #print("layer4", x.shape)
-        x = self.layer5(x)
-        #print("layer5", x.shape)
-        x = self.final_fc(x.flatten(-2))
-        class_pred = self.classification_branch(x)
-        x = torch.cat([x, class_pred.unsqueeze(-1)], 1)
-        return self.linear_mean(x.squeeze(-1).squeeze(-1)), self.linear_std(x.squeeze(-1).squeeze(-1)), class_pred
-
-
 class AudioEncoder(nn.Module):
     '''
     input: audio wave
@@ -138,71 +109,8 @@ class decoder_conv_block(nn.Module):
             x_residual = self.conv_block1_4(x_residual)        
             return x + x_residual
 
-class AudioDecoder(nn.Module):
-    def __init__(self):
-        '''
-        input: latent z torch.Size([1, 128])
-        output:  RGB image / torch.Size([3, 256, 256])
-        '''
-        super(AudioDecoder, self).__init__()
-        self.de_block1 = decoder_block(128+13 , 128)
-        self.conv_block1_1 = decoder_conv_block(input_channels = 128, output_channels = 128)
-        self.conv_block1_2 = decoder_conv_block(input_channels = 128, output_channels = 128)
-        self.de_block2 = decoder_block(128 , 128)
-        self.conv_block2_1 = decoder_conv_block(input_channels = 128, output_channels = 64)
-        self.conv_block2_2 = decoder_conv_block(input_channels = 64, output_channels = 64)
-        # do upscaling
-        self.Upsample1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)   
-        self.de_block3 = decoder_block(64 , 64)
-        self.conv_block3_1 = decoder_conv_block(input_channels = 64, output_channels = 32)
-        self.conv_block3_2 = decoder_conv_block(input_channels = 32, output_channels = 32)
-        
-        self.de_block4 = decoder_block(32 , 32)
-        self.conv_block4_1 = decoder_conv_block(input_channels = 32, output_channels = 16)
-        self.conv_block4_2 = decoder_conv_block(input_channels = 16, output_channels = 16)
-        # do upscaling
-        
-        #self.Upsample2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-        self.Upsample2 = nn.Upsample(size=(64,44), mode='bilinear', align_corners=True)  
-        #self.de_block5 = decoder_block(16 , 16)
-        self.conv_block5_1 = decoder_conv_block(input_channels = 16, output_channels = 16)
-        #self.de_block6 = decoder_block(16 , 16)
-        self.Upsample3 = nn.Upsample(size=(128,44), mode='bilinear', align_corners=True)  
-        self.conv_block5_2 = decoder_conv_block(input_channels = 16, output_channels = 16)
-        self.last_conv = nn.Conv2d(16, 1, kernel_size= 3, padding= 1)
 
-            
-    def forward(self, x, class_pred):
-        ## disentagle
-        #c = F.one_hot(c, num_classes=13)
-        x = torch.cat([x, class_pred], 1)#add class information
-        x = self.de_block1(x.unsqueeze(-1).unsqueeze(-1)) # torch.Size([1, 128, 2, 2])
-        x = self.conv_block1_1(x)
-        x = self.conv_block1_2(x)
 
-        x = self.de_block2(x) # torch.Size([1, 64, 4, 4])
-        x = self.conv_block2_1(x)
-        x = self.conv_block2_2(x)
-
-        x = self.Upsample1(x) # torch.Size([1, 64, 8, 8])
-       
-        x = self.de_block3(x) # torch.Size([1, 32, 16, 16])
-        x = self.conv_block3_1(x)
-        x = self.conv_block3_2(x)
-
-        x = self.de_block4(x) # torch.Size([1, 16, 32, 32])
-        x = self.conv_block4_1(x)
-        x = self.conv_block4_2(x)
-
-        x = self.Upsample2(x) # torch.Size([1, 16, 64, 64])
-        #x = self.de_block5(x) # torch.Size([1, 8, 128, 128])
-        #x = self.de_block6(x) # torch.Size([1, 3, 256, 256])
-        x = self.conv_block5_1(x)
-        x = self.Upsample3(x) 
-        x = self.conv_block5_2(x)
-        x = self.last_conv(x)
-        #print(x.shape)
-        return x.squeeze(1)
 
 class ImageDecoder(nn.Module):
     def __init__(self):
@@ -249,7 +157,6 @@ class ImageDecoder(nn.Module):
         x = self.conv_block2_2(x)
 
         x = self.Upsample1(x) # torch.Size([1, 64, 8, 8])
-       
         x = self.de_block3(x) # torch.Size([1, 32, 16, 16])
         x = self.conv_block3_1(x)
         x = self.conv_block3_2(x)
@@ -274,8 +181,8 @@ class Audio2ImageCVAE(nn.Module):
         input: audio wave
         output:  RGB image / torch.Size([3, 256, 256])
         '''
-        self.AudioEncoder = ImageEncoder()
-        self.ImageDecoder = AudioDecoder()
+        self.AudioEncoder = AudioEncoder()
+        self.ImageDecoder = ImageDecoder()
 
     def sampling(self, mean, logvar):
         std = torch.exp(0.5 * logvar)
