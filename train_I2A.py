@@ -59,7 +59,7 @@ class Runner(object):
    
             output, mean, std, class_pred = self.model(image, label)
 
-            # Compute the loss.
+            # Compute the loss.            
             loss = loss_function.loss_function(lms, output, mean, std)
             #loss_NLL = loss_NLL_function(class_pred, GT_label.detach())
             loss_NLL = loss_NLL_function(class_pred, label.detach())
@@ -82,7 +82,7 @@ class Runner(object):
             batch_size = image.shape[0]
             epoch_loss += batch_size * loss.item()
         epoch_loss = epoch_loss / len(dataloader.dataset)
-        return epoch_loss, output, lms
+        return epoch_loss, output, lms, label
 
     def test(self, dataloader):
         epoch_loss = 0
@@ -100,7 +100,7 @@ parser.add_argument('--name', type=str)
 parser.add_argument('--datasetPath', type=str, default='./dataset/')
 parser.add_argument('--saveDir', type=str, default='./experiment')
 parser.add_argument('--gpu', type=str, default='0', help='gpu')
-parser.add_argument('--numEpoch', type=int, default=10, help='input batch size for training')
+parser.add_argument('--numEpoch', type=int, default=200, help='input batch size for training')
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size for training')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')
@@ -120,7 +120,7 @@ if __name__ == '__main__':
     NUM_EPOCHS = args.numEpoch
     BATCH_SIZE = args.batchSize
     Dataset_Path = args.datasetPath
-
+    
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
@@ -131,14 +131,14 @@ if __name__ == '__main__':
     runner = Runner(model=model, lr = LR, sr = SR, save = save)
     start = time.time()
     for epoch in range(NUM_EPOCHS):
-        train_loss, _, _ = runner.run(train_dataloader, epoch, 'TRAIN')
-        valid_loss, output_image, gt = runner.run(valid_dataloader, epoch, 'VALID')
+        train_loss, _, _, _ = runner.run(train_dataloader, epoch, 'TRAIN')
+        valid_loss, output_image, gt, label = runner.run(valid_dataloader, epoch, 'VALID')
 
         log = "[Epoch %d/%d] [Train Loss: %.4f] [Valid Loss: %.4f]" % (epoch + 1, NUM_EPOCHS, train_loss, valid_loss)
         
         save.save_model(model, epoch)
         #save.save_image(gt, output_image, epoch)
-        save.save_mel(gt[0].cpu().detach().numpy(), output_image[0].cpu().detach().numpy(), epoch)
+        save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), epoch, label.cpu().detach().numpy())
         save.save_log(log)
         print(log)
 
