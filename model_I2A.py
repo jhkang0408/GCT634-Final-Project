@@ -24,7 +24,6 @@ class Classification_Branch(nn.Module):
         return x
 
 
-
 class Con2d_block(nn.Module):
       def __init__(self, input_channels, output_channels, kernel_size=3, stride=1, padding=1, pooling=2):
         super(Con2d_block, self).__init__()
@@ -36,6 +35,30 @@ class Con2d_block(nn.Module):
       def forward(self, x):
         out = self.mp(self.relu(self.bn(self.conv(x))))
         return out
+
+class AudioDiscrimitor(nn.Module):
+    def __init__(self):
+        super(AudioDiscrimitor, self).__init__()
+        self.layer1 = Con2d_block(input_channels = 1, output_channels = 64, kernel_size=3, stride=1, padding=1, pooling=2)
+        self.layer2 = Con2d_block(input_channels = 64, output_channels = 64 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
+        self.layer3 = Con2d_block(input_channels = 64 * 2, output_channels = 64 * 2 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
+        self.layer4 = Con2d_block(input_channels = 64 * 2 *2, output_channels = 64 * 2 * 2 * 2, kernel_size=3, stride=1, padding=1, pooling=2)
+        self.final_fc1 = nn.Linear(16, 1)       
+        self.final_fc2 = nn.Linear(512, 256)
+        self.final_fc3 = nn.Linear(256, 1)
+        self.sigmoid_layer = nn.Sigmoid()
+
+    def forward(self, x):      
+        x = self.layer1(x.unsqueeze(1))
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.final_fc1(x.flatten(-2))
+        x = self.final_fc2(x.squeeze(-1))
+        x = self.final_fc3(x)
+
+        return self.sigmoid_layer(x) 
+        
 
 class ImageEncoder(nn.Module):
     def __init__(self):
@@ -138,6 +161,7 @@ class decoder_conv_block(nn.Module):
             x_residual = self.conv_block1_4(x_residual)        
             return x + x_residual
 
+
 class AudioDecoder(nn.Module):
     def __init__(self):
         '''
@@ -167,8 +191,10 @@ class AudioDecoder(nn.Module):
         #self.de_block5 = decoder_block(16 , 16)
         self.conv_block5_1 = decoder_conv_block(input_channels = 16, output_channels = 16)
         #self.de_block6 = decoder_block(16 , 16)
-        self.Upsample3 = nn.Upsample(size=(128,44), mode='bilinear', align_corners=True)  
+        self.Upsample3 = nn.Upsample(size=(96,44), mode='bilinear', align_corners=True)  
         self.conv_block5_2 = decoder_conv_block(input_channels = 16, output_channels = 16)
+
+        self.Upsample4 = nn.Upsample(size=(128,44), mode='bilinear', align_corners=True)  
         self.last_conv1 = nn.Conv2d(16, 64, kernel_size= 3, padding= 1)
         self.last_conv2 = nn.Conv2d(64, 32, kernel_size= 3, padding= 1)
         self.last_conv3 = nn.Conv2d(32, 1, kernel_size= 3, padding= 1)
@@ -202,6 +228,8 @@ class AudioDecoder(nn.Module):
         x = self.conv_block5_1(x)
         x = self.Upsample3(x) 
         x = self.conv_block5_2(x)
+
+        x = self.Upsample4(x)
         x = self.last_conv1(x)
         x = self.last_conv2(x)
         x = self.last_conv3(x)
@@ -221,6 +249,7 @@ class ImageDecoder(nn.Module):
         self.de_block2 = decoder_block(128 , 128)
         self.conv_block2_1 = decoder_conv_block(input_channels = 128, output_channels = 64)
         self.conv_block2_2 = decoder_conv_block(input_channels = 64, output_channels = 64)
+        
         # do upscaling
         self.Upsample1 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)   
         self.de_block3 = decoder_block(64 , 64)
@@ -234,52 +263,51 @@ class ImageDecoder(nn.Module):
         self.Upsample2 = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)  
         self.de_block5 = decoder_block(16 , 16)
         self.conv_block5_1 = decoder_conv_block(input_channels = 16, output_channels = 16)
-        #self.de_block6 = decoder_block(16 , 16)
         
         self.conv_block5_2 = decoder_conv_block(input_channels = 16, output_channels = 16)
         self.last_conv = nn.Conv2d(16, 3, kernel_size= 3, padding= 1)
 
             
     def forward(self, x, class_pred):
-        ## disentagle
-        #c = F.one_hot(c, num_classes=13)
-        x = torch.cat([x, class_pred], 1)#add class information
-        x = self.de_block1(x.unsqueeze(-1).unsqueeze(-1)) # torch.Size([1, 128, 2, 2])
+        x = torch.cat([x, class_pred], 1)
+        
+        x = self.de_block1(x.unsqueeze(-1).unsqueeze(-1)) 
         x = self.conv_block1_1(x)
         x = self.conv_block1_2(x)
 
-        x = self.de_block2(x) # torch.Size([1, 64, 4, 4])
+        x = self.de_block2(x)
         x = self.conv_block2_1(x)
         x = self.conv_block2_2(x)
 
-        x = self.Upsample1(x) # torch.Size([1, 64, 8, 8])
+        x = self.Upsample1(x) 
        
-        x = self.de_block3(x) # torch.Size([1, 32, 16, 16])
+        x = self.de_block3(x)
         x = self.conv_block3_1(x)
         x = self.conv_block3_2(x)
 
-        x = self.de_block4(x) # torch.Size([1, 16, 32, 32])
+        x = self.de_block4(x)
         x = self.conv_block4_1(x)
         x = self.conv_block4_2(x)
-
-        x = self.Upsample2(x) # torch.Size([1, 16, 64, 64])
-        x = self.de_block5(x) # torch.Size([1, 8, 128, 128])
-        #x = self.de_block6(x) # torch.Size([1, 3, 256, 256])
+        
+        x = self.Upsample2(x)
+        
+        x = self.de_block5(x) 
         x = self.conv_block5_1(x)
         x = self.conv_block5_2(x)
+        
         x = self.last_conv(x)
         return x
 
 
-class Audio2ImageCVAE(nn.Module):
+class Image2AudioCVAE(nn.Module):
     def __init__(self):
-        super(Audio2ImageCVAE, self).__init__()
+        super(Image2AudioCVAE, self).__init__()
         '''
         input: audio wave
         output:  RGB image / torch.Size([3, 256, 256])
         '''
-        self.AudioEncoder = ImageEncoder()
-        self.ImageDecoder = AudioDecoder()
+        self.ImageEncoder = ImageEncoder()
+        self.AudioDecoder = AudioDecoder()
 
     def sampling(self, mean, logvar):
         std = torch.exp(0.5 * logvar)
@@ -287,9 +315,9 @@ class Audio2ImageCVAE(nn.Module):
         return eps * std + mean
 
     def forward(self, x, c):
-        mean, logvar, class_pred = self.AudioEncoder(x, c)
+        mean, logvar, class_pred = self.ImageEncoder(x, c)
         latent = self.sampling(mean, logvar)
-        out = self.ImageDecoder(latent, class_pred)
+        out = self.AudioDecoder(latent, class_pred)
         return out, mean, logvar, class_pred # torch.Size([3, 256, 256])
     
     
