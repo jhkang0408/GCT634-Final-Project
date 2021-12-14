@@ -300,7 +300,7 @@ class Audio2ImageCVAE(nn.Module):
         mean, logvar, class_pred = self.AudioEncoder(x, c)
         latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent, class_pred)
-        return out, mean, logvar, class_pred # torch.Size([3, 256, 256]) 
+        return out, mean, logvar, class_pred, latent # torch.Size([3, 256, 256]) 
         
 class Image2AudioCVAE(nn.Module):
     def __init__(self):
@@ -321,7 +321,7 @@ class Image2AudioCVAE(nn.Module):
         mean, logvar, class_pred = self.ImageEncoder(x, c)
         latent = self.sampling(mean, logvar)
         out = self.AudioDecoder(latent, class_pred)
-        return out, mean, logvar, class_pred # torch.Size([3, 256, 256])
+        return out, mean, logvar, class_pred, latent # torch.Size([3, 256, 256])
     
     
     

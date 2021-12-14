@@ -1,3 +1,4 @@
+from pickle import FALSE
 from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
@@ -26,13 +27,12 @@ from torch.utils.data.dataset import random_split
 import loss_function
 import data_utils
 import utils
+from utils import show_latent_space
 from torch.autograd import Variable
 
 class Runner(object):
     def __init__(self, model, ImageDiscrimitor,  lr, sr, save):
         
-        
-
         self.learning_rate = lr
         self.stopping_rate = sr
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -52,11 +52,14 @@ class Runner(object):
     # Running model for train, test and validation. mode: 'train' for training, 'eval' for validation and test
     def run(self, dataloader, epoch, mode='TRAIN'):
         self.model.train() if mode is 'TRAIN' else self.model.eval()
-
         epoch_loss = 0
         loss_NLL_function = nn.CrossEntropyLoss()
         #pbar = tqdm(dataloader, desc=f'{mode} Epoch {epoch:02}')  # progress bar
         #loop = tqdm(range(len(dataloader)))
+
+        latent_result =[] 
+        save_label = []
+        show_latent=False #False
         
         #for item in pbar:
         for  iter, item in enumerate(dataloader):
@@ -66,7 +69,14 @@ class Runner(object):
             lms = lms.to(self.device)
             label = label.to(self.device)
             #GT_label = F.one_hot(label, num_classes=13).type(torch.cuda.FloatTensor)                                    
-            output, mean, std, class_pred = self.model(lms, label)
+            output, mean, std, class_pred, latent = self.model(lms, label)
+
+            batch_size = image.shape[0]
+            #visualize latent space
+            if show_latent:
+                with_c=True
+                mode = "TRAIN_A2I"
+                latent_result, save_label = show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader, batch_size, latent_result, save_label)
 
             ## update D ##################################################
             for p in self.ImageDiscrimitor.parameters():
@@ -100,7 +110,7 @@ class Runner(object):
             #CE the class prediction
             loss_NLL = loss_NLL_function(class_pred, label.detach())
 
-            total_loss = loss_VAE + loss_NLL + 0.0001 * loss_G
+            total_loss = loss_VAE + loss_NLL + 0.0005 * loss_G
             if mode is 'TRAIN':
                 # Perform backward propagation to compute gradients.
                 total_loss.backward()
@@ -120,10 +130,6 @@ class Runner(object):
         epoch_loss = epoch_loss / len(dataloader.dataset)
         return epoch_loss, output, image
 
-    def test(self, dataloader):
-        epoch_loss = 0
-        return epoch_loss
-
     def early_stop(self, loss, epoch):
         self.scheduler.step(loss, epoch)
         self.learning_rate = self.optimizer.param_groups[0]['lr']
@@ -138,7 +144,7 @@ parser.add_argument('--name', type=str)
 parser.add_argument('--datasetPath', type=str, default='./dataset/') 
 parser.add_argument('--saveDir', type=str, default='./experiment')
 parser.add_argument('--gpu', type=str, default='0', help='gpu')
-parser.add_argument('--numEpoch', type=int, default=10, help='input batch size for training')
+parser.add_argument('--numEpoch', type=int, default=81, help='input batch size for training')
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size for training')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')

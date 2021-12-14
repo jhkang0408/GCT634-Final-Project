@@ -10,6 +10,9 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
+
+from sklearn.manifold import TSNE 
+
 #import seaborn as sns
 class SaveUtils():
     def __init__(self, args, name):
@@ -111,4 +114,42 @@ class SaveUtils():
         del new_im 
         
         for i in range(batch_size):  
-            os.remove(self.save_dir_image +'/'+ str(i)+'fake.png')        
+            os.remove(self.save_dir_image +'/'+ str(i)+'fake.png')     
+
+#visualize latent space
+def save_tsne_img(latent_result,save_label,img_name):
+    class_num=13
+    save_name="./tsne_result/"+img_name
+    #run tsne
+    tsne = TSNE(n_components=2, verbose=1, n_iter=300, init='pca',perplexity=5, method='barnes_hut')
+    tsne_v = tsne.fit_transform(latent_result)
+    #plot
+    plt.figure(figsize=(12, 13))  
+    instruments = ['bassoon', 'cello', 'clarinet', 'double_bass', 'flute', 'horn', 'oboe', 'sax', 'trombone', 'trumpet', 'tuba', 'viola', 'violin']
+    scatter = plt.scatter(tsne_v[:, 0], tsne_v[:, 1],c=save_label, cmap=plt.cm.get_cmap('rainbow', class_num), s=50, label=instruments, alpha=0.95) 
+    plt.xlim([-20, 20])      
+    plt.ylim([-20, 20])    
+    plt.legend(handles=scatter.legend_elements()[0], labels=instruments,loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=7)
+    plt.savefig(save_name)
+    print(save_name+"  saved image.")
+
+def show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader,batch_size,latent_result, save_label):
+    if iter == 0:
+        if with_c:
+            latent_result=np.concatenate((latent.cpu().detach().numpy(),class_pred.cpu().detach().numpy()),axis=1) #(16, 141)
+        else:
+            latent_result=latent.cpu().detach().numpy()
+        save_label=label.cpu().detach().numpy()
+    else:
+        if with_c:
+            concat_c=np.concatenate((latent.cpu().detach().numpy(),class_pred.cpu().detach().numpy()),axis=1)
+            latent_result=np.concatenate((latent_result, concat_c),axis=0) #(10544, 128) 
+        else:
+            latent_result=np.concatenate((latent_result,latent.cpu().detach().numpy()),axis=0) #(10544, 128)
+        save_label=np.concatenate((save_label,label.cpu().detach().numpy()),axis=0) #(10544,)
+
+        if not iter%((len(dataloader.dataset)//batch_size)-1):#658
+            img_name = "["+str(iter)+"] with_c_"+str(with_c)+"_"+mode+".png"
+            save_tsne_img(latent_result,save_label,img_name)
+            
+    return  latent_result, save_label   

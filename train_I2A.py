@@ -25,6 +25,7 @@ from torch.utils.data.dataset import random_split
 import loss_function
 import data_utils
 import utils
+from utils import show_latent_space
 
 class Runner(object):
     def __init__(self, model, lr, sr, save):
@@ -37,12 +38,17 @@ class Runner(object):
 
     # Running model for train, test and validation. mode: 'train' for training, 'eval' for validation and test
     def run(self, dataloader, epoch, mode='TRAIN'):
-        self.model.train() if mode is 'TRAIN' else self.model.eval()
+        show_latent=False
 
+        self.model.train() if mode is 'TRAIN' else self.model.eval()
         epoch_loss = 0
         loss_NLL_function = nn.CrossEntropyLoss()
         #pbar = tqdm(dataloader, desc=f'{mode} Epoch {epoch:02}')  # progress bar
         #loop = tqdm(range(len(dataloader)))
+
+        latent_result =[] #np.array([])
+        save_label = []
+        show_latent=False 
         
         #for item in pbar:
         for  iter, item in enumerate(dataloader):
@@ -52,7 +58,14 @@ class Runner(object):
             lms = lms.to(self.device)
             label = label.to(self.device)
    
-            output, mean, std, class_pred = self.model(image, label)
+            output, mean, std, class_pred,latent = self.model(image, label)
+
+            batch_size = image.shape[0]
+            #visualize latent space
+            if show_latent:
+                with_c=True
+                mode = "TRAIN_I2A"
+                latent_result, save_label = show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader, batch_size,latent_result, save_label)
 
             # Compute the loss.            
             loss = loss_function.loss_function(lms, output, mean, std)

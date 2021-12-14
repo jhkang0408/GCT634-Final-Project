@@ -110,11 +110,11 @@ class SubURMP(Dataset):
         #self.imgtransform = torchvision.transforms.Compose([torchvision.transforms.Resize((128,128)), torchvision.transforms.RandomHorizontalFlip(), torchvision.transforms.ToTensor()])
         self.imgtransform = torchvision.transforms.Compose([torchvision.transforms.Resize((128,128)), torchvision.transforms.ToTensor()])
         if train==True:
-          dummy_img_paths = [self.root+'Sub-URMP(processed)/IMG/train/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
-          dummy_lms_paths = [self.root+'Sub-URMP(processed)/LMS/train/'+self.instruments[i]+'/'+str(j+1)+ '.npy' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
+          dummy_img_paths = [self.root+'Sub-URMP/IMG/train/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
+          dummy_lms_paths = [self.root+'Sub-URMP/LMS/train/'+self.instruments[i]+'/'+str(j+1)+ '.npy' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
         else:
-          dummy_img_paths = [self.root+'Sub-URMP(processed)/IMG/test/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
-          dummy_lms_paths = [self.root+'Sub-URMP(processed)/LMS/test/'+self.instruments[i]+'/'+str(j+1)+ '.npy' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
+          dummy_img_paths = [self.root+'Sub-URMP/IMG/test/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
+          dummy_lms_paths = [self.root+'Sub-URMP/LMS/test/'+self.instruments[i]+'/'+str(j+1)+ '.npy' for i in range(len(self.instruments)) for j in range(self.how_many_test[i])]
         self.img_paths = dummy_img_paths
         self.lms_paths = dummy_lms_paths
         
