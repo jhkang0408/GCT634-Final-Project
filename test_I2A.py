@@ -22,33 +22,21 @@ from torch.utils.data import Dataset, DataLoader
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data.dataset import random_split
 
-
 import loss_function
 import data_utils
 import utils
-from utils import show_latent_space 
-from torch.autograd import Variable
-
+from utils import show_latent_space
 
 class Runner(object):
-    def __init__(self, model, ImageDiscrimitor,  lr, sr, save):
-        
+    def __init__(self, model, lr, sr, save):
+        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, verbose=True)
         self.learning_rate = lr
         self.stopping_rate = sr
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = model.to(self.device)
-        self.ImageDiscrimitor = ImageDiscrimitor.to(self.device)
-        
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
-        self.optimizer_D = torch.optim.Adam(self.ImageDiscrimitor.parameters(), lr=lr)
 
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, verbose=True)
-        self.scheduler_D = ReduceLROnPlateau(self.optimizer_D, mode='min', factor=0.1, patience=10, verbose=True)
-
-        #GAN loss definition
-        self.criterion_D = nn.BCELoss()
-        self.criterion_G = nn.BCELoss()
-
+    # Running model for train, test and validation. mode: 'train' for training, 'eval' for validation and test
     def test(self, dataloader,dir_pth):
         self.model.eval()
         self.model.load_state_dict(torch.load(dir_pth))
@@ -57,52 +45,38 @@ class Runner(object):
 
         latent_result =[] #np.array([])
         save_label = []
-        show_latent=True
-
+        show_latent=False 
+        
+        #for item in pbar:
         for  iter, item in enumerate(dataloader):
+        # Move mini-batch to the desired device.
             image, lms, label = item
             image = image.to(self.device) 
             lms = lms.to(self.device)
             label = label.to(self.device)
-
-            output, mean, std, class_pred, latent = self.model(lms, label)
+   
+            output, mean, std, class_pred,latent = self.model(image, label)
 
             batch_size = image.shape[0]
             #visualize latent space
             if show_latent:
                 with_c=True
-                mode = "TEST_A2I"
+                mode = "TEST_I2A"
                 latent_result, save_label = show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader, batch_size,latent_result, save_label)
-            # real image
-            output_real = self.ImageDiscrimitor(image)
-            true_labels = Variable(torch.ones_like(output_real))
-            
-            loss_G = self.criterion_G(self.ImageDiscrimitor(output), true_labels)
-            #recon and latent ELBO
-            loss_VAE = loss_function.loss_function(image, output, mean, std)
-            #CE the class prediction
-            loss_NLL = loss_NLL_function(class_pred, label.detach())
 
-            total_loss = loss_VAE + loss_NLL + 0.0001 * loss_G 
+            # Compute the loss.            
+            loss = loss_function.loss_function(lms, output, mean, std)
+            loss_NLL = loss_NLL_function(class_pred, label.detach())
+            total_loss = loss + loss_NLL
 
             if iter % 100 == 0:
-                log = "[Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f] [GAN Loss: %.4f]" % (iter, total_loss, loss_VAE, loss_NLL, loss_G)
+                log = "[Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f]" % (iter, total_loss, loss, loss_NLL)
                 print(log)
                 save.save_log(log)
 
-            epoch_loss += batch_size * total_loss.item()
+            epoch_loss += batch_size * loss.item()
         epoch_loss = epoch_loss / len(dataloader.dataset)
-
-        return epoch_loss, output, image
-
-    def early_stop(self, loss, epoch):
-        self.scheduler.step(loss, epoch)
-        self.learning_rate = self.optimizer.param_groups[0]['lr']
-        #match net_D lr with generator
-        self.optimizer_D.param_groups[0]['lr'] = self.learning_rate 
-        stop = self.learning_rate < self.stopping_rate
-        return stop
-  
+        return epoch_loss, output, lms, label
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -115,7 +89,6 @@ parser.add_argument('--batchSize', type=int, default=16, help='input batch size 
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')
 args = parser.parse_args()
-
 ## basic run command : python train --name temp 
 
 if __name__ == '__main__':
@@ -129,23 +102,22 @@ if __name__ == '__main__':
     SR = args.sr  # stopping rate
     BATCH_SIZE = args.batchSize
     Dataset_Path = args.datasetPath
-
+    
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
-    from model import Audio2ImageCVAE, ImageDiscrimitor
-    ImageDiscrimitor = ImageDiscrimitor()
-    model = Audio2ImageCVAE()
-
+    from model import Image2AudioCVAE
+    model = Image2AudioCVAE()
     train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
-    runner = Runner(model=model,ImageDiscrimitor = ImageDiscrimitor , lr = LR, sr = SR, save = save)
+
+    runner = Runner(model=model, lr = LR, sr = SR, save = save)
     start = time.time()
 
-    test_loss, output_image, gt = runner.test(test_dataloader, args.pth)
+    test_loss, output_image, gt, label = runner.test(test_dataloader, args.pth)
     log = "[Test Loss: %.4f]" % (test_loss)
-    
-    save.save_image(gt, output_image, "test")
+        
+    save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), epoch, label.cpu().detach().numpy())
     save.save_log(log)
     print(log)
 
-    print("Test Execution time: "+str(time.time()-start))
+    print("Execution time: "+str(time.time()-start))
