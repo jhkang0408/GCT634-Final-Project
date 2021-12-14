@@ -128,7 +128,7 @@ class Runner(object):
         self.scheduler.step(loss, epoch)
         self.learning_rate = self.optimizer.param_groups[0]['lr']
         #match net_D lr with generator
-        #self.optimizer_D.param_groups[0]['lr'] = self.learning_rate 
+        self.optimizer_D.param_groups[0]['lr'] = self.learning_rate 
         stop = self.learning_rate < self.stopping_rate
         return stop
 

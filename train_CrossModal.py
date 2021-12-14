@@ -101,8 +101,8 @@ class Runner(object):
             loss_VAE_Audio = loss_function.loss_function(lms, out_lms, mean_v, logvar_v)
             loss_NLL_Image = loss_NLL_function(class_pred_v, label.detach())
             
-            # Cosine Similarity
-            loss_Cosim = -self.criterion_Cosim(latent_a, latent_v).mean()
+            # Cosine Similarity            
+            loss_Cosim = 0.1*(1-self.criterion_Cosim(torch.cat([mean_a, logvar_a],1), torch.cat([mean_v, logvar_v],1)).mean())
             total_loss = (loss_VAE_image + loss_NLL_Audio + 0.0001*loss_G) + (loss_VAE_Audio + loss_NLL_Image) + loss_Cosim
             
             if mode is 'TRAIN':
@@ -141,7 +141,7 @@ parser.add_argument('--name', type=str)
 parser.add_argument('--datasetPath', type=str, default='./dataset/') 
 parser.add_argument('--saveDir', type=str, default='./experiment')
 parser.add_argument('--gpu', type=str, default='0', help='gpu')
-parser.add_argument('--numEpoch', type=int, default=10, help='input batch size for training')
+parser.add_argument('--numEpoch', type=int, default=200, help='input batch size for training')
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size for training')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')

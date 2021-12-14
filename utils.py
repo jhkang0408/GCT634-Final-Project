@@ -55,7 +55,7 @@ class SaveUtils():
         for i in range(batch_size): 
             plt.figure(figsize=(2,4))            
             plt.matshow(gt[i], cmap=cmap)
-            plt.clim(-100, 52)
+            plt.clim(0, 1)
             plt.axis('off')
             plt.title(instruments[label[i]], fontsize=25)
             plt.savefig(self.save_dir_lms +'/'+ str(i)+'gt.png')
@@ -87,7 +87,7 @@ class SaveUtils():
         for i in range(batch_size): 
             plt.figure(figsize=(2,4))
             plt.matshow(fake[i], cmap=cmap)
-            plt.clim(-100, 52)
+            plt.clim(0, 1)
             plt.axis('off')
             plt.title(instruments[label[i]], fontsize=25)
             plt.savefig(self.save_dir_lms +'/'+ str(i)+'fake.png')  
