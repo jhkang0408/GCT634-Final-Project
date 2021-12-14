@@ -103,10 +103,11 @@ class SubURMP(Dataset):
         super(SubURMP, self).__init__()
         self.root = root
         self.instruments = ['bassoon', 'cello', 'clarinet', 'double_bass', 'flute', 'horn', 'oboe', 'sax', 'trombone', 'trumpet', 'tuba', 'viola', 'violin']
-        self.how_many_train = [1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015]
-        self.how_many_test = [390, 390, 390, 390, 390, 390, 390, 390, 390, 390, 390, 390, 390]        
-        #self.how_many_train = [1735, 9800, 8125, 1270, 5690, 5540, 4505, 7615, 8690, 1015, 3285, 6530, 7430]
-        #self.how_many_test = [390, 1030, 945, 1180, 925, 525, 390, 910, 805, 520, 525, 485, 945]        
+        #self.how_many_train = [1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015, 1015]
+        #self.how_many_test = [390, 390, 390, 390, 390, 390, 390, 390, 390, 390, 390, 390, 390]        
+        self.how_many_train = [1735, 9800, 8125, 1270, 5690, 5540, 4505, 7615, 8690, 1015, 3285, 6530, 7430]
+        self.how_many_test = [390, 1030, 945, 1180, 925, 525, 390, 910, 805, 520, 525, 485, 945]        
+        #self.imgtransform = torchvision.transforms.Compose([torchvision.transforms.Resize((128,128)), torchvision.transforms.RandomHorizontalFlip(), torchvision.transforms.ToTensor()])
         self.imgtransform = torchvision.transforms.Compose([torchvision.transforms.Resize((128,128)), torchvision.transforms.ToTensor()])
         if train==True:
           dummy_img_paths = [self.root+'Sub-URMP(processed)/IMG/train/'+self.instruments[i]+'/'+str(j+1)+ '.jpg' for i in range(len(self.instruments)) for j in range(self.how_many_train[i])]
@@ -119,9 +120,9 @@ class SubURMP(Dataset):
         
         assert isinstance(self.img_paths, list), 'Wrong type. self.paths should be list.'
         if train is True: # 71230, 1015*13
-            assert len(self.img_paths) == 1015*13, 'There are 71,230 train images, but you have gathered %d image paths' % len(self.img_paths)
+            assert len(self.img_paths) == 71230, 'There are 71,230 train images, but you have gathered %d image paths' % len(self.img_paths)
         else: # 9575, 390*13
-            assert len(self.img_paths) == 390*13, 'There are 9,575 test images, but you have gathered %d image paths' % len(self.img_paths)
+            assert len(self.img_paths) == 9575, 'There are 9,575 test images, but you have gathered %d image paths' % len(self.img_paths)
         
     def __getitem__(self, idx):        
         img_path = self.img_paths[idx]

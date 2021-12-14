@@ -26,15 +26,28 @@ from torch.utils.data.dataset import random_split
 import loss_function
 import data_utils
 import utils
+from torch.autograd import Variable
 
 class Runner(object):
-    def __init__(self, model, lr, sr, save):
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+    def __init__(self, model, ImageDiscrimitor,  lr, sr, save):
+        
+        
+
         self.learning_rate = lr
         self.stopping_rate = sr
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.model = model.to(self.device)
+        self.ImageDiscrimitor = ImageDiscrimitor.to(self.device)
+        
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.optimizer_D = torch.optim.Adam(self.ImageDiscrimitor.parameters(), lr=lr)
+
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=10, verbose=True)
+        self.scheduler_D = ReduceLROnPlateau(self.optimizer_D, mode='min', factor=0.1, patience=10, verbose=True)
+
+        #GAN loss definition
+        self.criterion_D = nn.BCELoss()
+        self.criterion_G = nn.BCELoss()
 
     # Running model for train, test and validation. mode: 'train' for training, 'eval' for validation and test
     def run(self, dataloader, epoch, mode='TRAIN'):
@@ -52,22 +65,42 @@ class Runner(object):
             image = image.to(self.device) 
             lms = lms.to(self.device)
             label = label.to(self.device)
-            GT_label = F.one_hot(label, num_classes=13).type(torch.cuda.FloatTensor)                                    
-   
+            #GT_label = F.one_hot(label, num_classes=13).type(torch.cuda.FloatTensor)                                    
             output, mean, std, class_pred = self.model(lms, label)
 
-            # Compute the loss.
-            loss = loss_function.loss_function(image, output, mean, std)
-            #loss_NLL = loss_NLL_function(class_pred, GT_label.detach())
-            loss_NLL = loss_NLL_function(class_pred, label.detach())
-            
-            total_loss = loss + loss_NLL
-            if iter % 100 == 0:
-                #print(GT_label[0])
-                log = "[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f]" % (epoch, iter, total_loss, loss, loss_NLL)
-                print(log)
-                save.save_log(log)
+            ## update D ##################################################
+            for p in self.ImageDiscrimitor.parameters():
+                p.requires_grad = True
+            self.ImageDiscrimitor.zero_grad()
 
+            # real image
+            output_real = self.ImageDiscrimitor(image)
+            true_labels = Variable(torch.ones_like(output_real))
+            loss_D_real = self.criterion_D(output_real, true_labels)
+            #fake image
+            fake_image = output.detach()
+            D_fake = self.ImageDiscrimitor(fake_image)
+            fake_labels = Variable(torch.zeros_like(D_fake))
+            loss_D_fake = self.criterion_D(D_fake, fake_labels)
+            
+            loss_D_total = 0.5 * (loss_D_fake + loss_D_real)
+            if mode is 'TRAIN':
+                loss_D_total.backward()
+                self.optimizer_D.step()
+
+            ## # update G #################################################
+
+            for p in self.ImageDiscrimitor.parameters():
+                p.requires_grad = False
+            self.ImageDiscrimitor.zero_grad()
+
+            loss_G = self.criterion_G(self.ImageDiscrimitor(output), true_labels)
+            #recon and latent ELBO
+            loss_VAE = loss_function.loss_function(image, output, mean, std)
+            #CE the class prediction
+            loss_NLL = loss_NLL_function(class_pred, label.detach())
+
+            total_loss = loss_VAE + loss_NLL + 0.0001 * loss_G
             if mode is 'TRAIN':
                 # Perform backward propagation to compute gradients.
                 total_loss.backward()
@@ -75,9 +108,15 @@ class Runner(object):
                 self.optimizer.step()
                 # Reset the computed gradients.
                 self.optimizer.zero_grad()
+            
+            if iter % 100 == 0:
+                #print(GT_label[0])
+                log = "[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Loss: %.4f] [Classification Loss: %.4f] [GAN Loss: %.4f]" % (epoch, iter, total_loss, loss_VAE, loss_NLL, loss_G)
+                print(log)
+                save.save_log(log)
 
             batch_size = image.shape[0]
-            epoch_loss += batch_size * loss.item()
+            epoch_loss += batch_size * total_loss.item()
         epoch_loss = epoch_loss / len(dataloader.dataset)
         return epoch_loss, output, image
 
@@ -88,6 +127,8 @@ class Runner(object):
     def early_stop(self, loss, epoch):
         self.scheduler.step(loss, epoch)
         self.learning_rate = self.optimizer.param_groups[0]['lr']
+        #match net_D lr with generator
+        self.optimizer_D.param_groups[0]['lr'] = self.learning_rate 
         stop = self.learning_rate < self.stopping_rate
         return stop
 
@@ -121,11 +162,12 @@ if __name__ == '__main__':
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
-    from model_DeeperCVAE import Audio2ImageCVAE
+    from model import Audio2ImageCVAE, ImageDiscrimitor
+    ImageDiscrimitor = ImageDiscrimitor()
     model = Audio2ImageCVAE()
     train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
 
-    runner = Runner(model=model, lr = LR, sr = SR, save = save)
+    runner = Runner(model=model,ImageDiscrimitor = ImageDiscrimitor , lr = LR, sr = SR, save = save)
     start = time.time()
     for epoch in range(NUM_EPOCHS):
         train_loss, _, _ = runner.run(train_dataloader, epoch, 'TRAIN')
