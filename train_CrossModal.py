@@ -114,7 +114,11 @@ class Runner(object):
                 self.optimizer.zero_grad()
             
             if iter % 100 == 0:
-                log = "[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Image Loss: %.4f] [VAE Audio Loss: %.4f] [Cosine Similarity Loss: %.4f]" % (epoch, iter, total_loss, loss_VAE_image, loss_VAE_Audio, loss_Cosim)
+                log = "[Epoch %d][Iter %d] [Total Loss: %.4f] [Cosine Similarity Loss: %.4f] \n Image2Audio: [VAE Loss: %.4f] [Classification Loss: %.4f]" % (epoch, iter, total_loss, loss_Cosim, loss_VAE_Audio, loss_NLL_Image )
+                print(log)
+                save.save_log(log)
+                #log = "[Epoch %d][Iter %d] [Train Loss: %.4f] [VAE Image Loss: %.4f] [VAE Audio Loss: %.4f] [Cosine Similarity Loss: %.4f]" % (epoch, iter, total_loss, loss_VAE_image, loss_VAE_Audio, loss_Cosim)
+                log = "Audio2Image: [VAE Loss: %.4f] [Classification Loss: %.4f] [GAN Loss: %.4f]" % (loss_VAE_image, loss_NLL_Audio, loss_G)
                 print(log)
                 save.save_log(log)
 
