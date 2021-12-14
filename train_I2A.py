@@ -58,7 +58,7 @@ class Runner(object):
             lms = lms.to(self.device)
             label = label.to(self.device)
    
-            output, mean, std, class_pred,latent = self.model(image, label)
+            output, mean, std, class_pred, latent = self.model(image, label)
 
             batch_size = image.shape[0]
             #visualize latent space
