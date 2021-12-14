@@ -324,4 +324,29 @@ class Image2AudioCVAE(nn.Module):
         return out, mean, logvar, class_pred # torch.Size([3, 256, 256])
     
     
-    
+class CrossModal(nn.Module):
+    def __init__(self):
+        super(CrossModal, self).__init__()
+        # Audio2ImageCVAE
+        self.AudioEncoder = AudioEncoder()
+        self.ImageDecoder = ImageDecoder()
+        # Image2AudioCVAE
+        self.ImageEncoder = ImageEncoder()
+        self.AudioDecoder = AudioDecoder() 
+        
+    def sampling(self, mean, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return eps * std + mean
+
+    def forward(self, image, lms, c):
+        # Audio -> Image
+        mean_a, logvar_a, class_pred_a = self.AudioEncoder(lms, c)
+        latent_a = self.sampling(mean_a, logvar_a)
+        out_image = self.ImageDecoder(latent_a, class_pred_a)
+        # Image -> Audio
+        mean_v, logvar_v, class_pred_v = self.ImageEncoder(image, c)
+        latent_v = self.sampling(mean_v, logvar_v)
+        out_lms = self.AudioDecoder(latent_v, class_pred_v)
+        
+        return out_image, latent_a, mean_a, logvar_a, class_pred_a, out_lms, latent_v, mean_v, logvar_v, class_pred_v     

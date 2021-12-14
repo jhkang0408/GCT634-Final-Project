@@ -18,10 +18,14 @@ class SaveUtils():
         if not os.path.exists(self.save_dir):
             os.makedirs(self.save_dir)
         
-        self.save_dir_image = os.path.join(self.save_dir, 'test_image')
+        self.save_dir_image = os.path.join(self.save_dir, 'IMAGE')
         if not os.path.exists(self.save_dir_image):
             os.makedirs(self.save_dir_image)
-        
+
+        self.save_dir_lms = os.path.join(self.save_dir, 'LMS')
+        if not os.path.exists(self.save_dir_lms):
+            os.makedirs(self.save_dir_lms) 
+            
         self.save_dir_model = os.path.join(self.save_dir, 'model')
         if not os.path.exists(self.save_dir_model):
             os.makedirs(self.save_dir_model)
@@ -54,9 +58,9 @@ class SaveUtils():
             plt.clim(-100, 52)
             plt.axis('off')
             plt.title(instruments[label[i]], fontsize=25)
-            plt.savefig(self.save_dir_image +'/'+ str(i)+'gt.png')
+            plt.savefig(self.save_dir_lms +'/'+ str(i)+'gt.png')
                    
-        gt_images = [Image.open(self.save_dir_image +'/'+ str(x)+'gt.png') for x in range(batch_size)]
+        gt_images = [Image.open(self.save_dir_lms +'/'+ str(x)+'gt.png') for x in range(batch_size)]
         widths, heights = zip(*(i.size for i in gt_images))
         total_width = int(sum(widths)/2) + widths[0]
         max_height = int(max(heights)*2)        
@@ -73,12 +77,12 @@ class SaveUtils():
             if i==int(batch_size/2): 
                 x_offset=0
             i+=1
-        new_im.save(self.save_dir_image +'/gt_mel_'+ str(epoch) +'.jpg')        
+        new_im.save(self.save_dir_lms +'/gt_mel_'+ str(epoch) +'.jpg')        
         del gt_images 
         del new_im
         
         for i in range(batch_size):  
-            os.remove(self.save_dir_image +'/'+ str(i)+'gt.png')
+            os.remove(self.save_dir_lms +'/'+ str(i)+'gt.png')
             
         for i in range(batch_size): 
             plt.figure(figsize=(2,4))
@@ -86,9 +90,9 @@ class SaveUtils():
             plt.clim(-100, 52)
             plt.axis('off')
             plt.title(instruments[label[i]], fontsize=25)
-            plt.savefig(self.save_dir_image +'/'+ str(i)+'fake.png')  
+            plt.savefig(self.save_dir_lms +'/'+ str(i)+'fake.png')  
             
-        fake_images = [Image.open(self.save_dir_image +'/'+ str(x)+'fake.png') for x in range(batch_size)]
+        fake_images = [Image.open(self.save_dir_lms +'/'+ str(x)+'fake.png') for x in range(batch_size)]
         widths, heights = zip(*(i.size for i in fake_images))
         total_width = int(sum(widths)/2) + widths[0]
         max_height = int(max(heights)*2)        
@@ -105,10 +109,10 @@ class SaveUtils():
             if i==int(batch_size/2):
                 x_offset=0
             i+=1
-        new_im.save(self.save_dir_image +'/output_mel_'+ str(epoch) +'.jpg')           
+        new_im.save(self.save_dir_lms +'/output_mel_'+ str(epoch) +'.jpg')           
 
         del fake_images 
         del new_im 
         
         for i in range(batch_size):  
-            os.remove(self.save_dir_image +'/'+ str(i)+'fake.png')        
+            os.remove(self.save_dir_lms +'/'+ str(i)+'fake.png')        
