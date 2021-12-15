@@ -4,7 +4,7 @@
 ### GCT634-Final-Project 
 ----------
 # Usage:
-First, put dataset in ```<Code_path>/datasets/```
+First, put dataset in ```<Code_path>/dataset/```
 
 Dataset Link: https://www.cs.rochester.edu/~cxu22/d/vagan/
 
