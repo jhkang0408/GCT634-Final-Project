@@ -100,7 +100,7 @@ class Runner(object):
             #CE the class prediction
             loss_NLL = loss_NLL_function(class_pred, label.detach())
 
-            total_loss = loss_VAE + loss_NLL + 0.0001 * loss_G
+            total_loss = loss_VAE + loss_NLL + 0.0005 * loss_G
             if mode is 'TRAIN':
                 # Perform backward propagation to compute gradients.
                 total_loss.backward()
@@ -118,7 +118,7 @@ class Runner(object):
             batch_size = image.shape[0]
             epoch_loss += batch_size * total_loss.item()
         epoch_loss = epoch_loss / len(dataloader.dataset)
-        return epoch_loss, output, image
+        return epoch_loss, output, image, lms ,label
 
     def test(self, dataloader):
         epoch_loss = 0
@@ -171,12 +171,13 @@ if __name__ == '__main__':
     start = time.time()
     for epoch in range(NUM_EPOCHS):
         train_loss, _, _ = runner.run(train_dataloader, epoch, 'TRAIN')
-        valid_loss, output_image, gt = runner.run(valid_dataloader, epoch, 'VALID')
+        valid_loss, output_image, gt ,lms ,label = runner.run(valid_dataloader, epoch, 'VALID')
 
         log = "[Epoch %d/%d] [Train Loss: %.4f] [Valid Loss: %.4f]" % (epoch + 1, NUM_EPOCHS, train_loss, valid_loss)
         
         save.save_model(model, epoch)
         save.save_image(gt, output_image, epoch)
+        save.save_mel_onlyGT(lms.cpu().detach().numpy(), epoch, label.cpu().detach().numpy())
         save.save_log(log)
         print(log)
 
