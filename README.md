@@ -8,6 +8,8 @@ First, put dataset in ```<Code_path>/dataset/```
 
 Dataset Link: https://www.cs.rochester.edu/~cxu22/d/vagan/
 
+The results will save in ```<Code_path>/experiment/```
+
 ## Run Audio to Image:
 
 ```
