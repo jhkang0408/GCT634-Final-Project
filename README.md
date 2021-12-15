@@ -17,7 +17,7 @@ python trainA2I.py --name <save_result_name>
 python trainA2I.py --name <save_result_name>
 ```
 
-## Run Cross Modal generation:
+## Run Cross Modal Generation:
 
 ```
 python train_CrossModal.py --name <save_result_name>
