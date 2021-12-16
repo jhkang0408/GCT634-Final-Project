@@ -46,7 +46,9 @@ class SaveUtils():
     def save_image(self, gt, fake, epoch):
         save_image(gt, self.save_dir_image +'/gt_img_'+ str(epoch) +'.png')    
         save_image(fake, self.save_dir_image +'/output_img_'+ str(epoch) +'.png')
-    
+
+    def save_image_onlyGT(self, gt, epoch):
+        save_image(gt, self.save_dir_image +'/gt_img_'+ str(epoch) +'.png')    
     
     def save_mel(self, gt, fake, epoch, label):
         cmap = plt.get_cmap('jet') 
