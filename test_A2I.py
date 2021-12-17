@@ -94,7 +94,7 @@ class Runner(object):
             epoch_loss += batch_size * total_loss.item()
         epoch_loss = epoch_loss / len(dataloader.dataset)
 
-        return epoch_loss, output, image
+        return epoch_loss, output, image, lms ,label
 
 
 import argparse
@@ -134,11 +134,12 @@ if __name__ == '__main__':
     runner = Runner(model=model,ImageDiscrimitor = ImageDiscrimitor , lr = LR, sr = SR, save = save)
     start = time.time()
 
-    test_loss, output_image, gt = runner.test(test_dataloader, args.pth)
+    test_loss, output_image, gt, lms, label = runner.test(test_dataloader, args.pth)
     log = "[Test Loss: %.4f]" % (test_loss)
     
     save.save_model(model, 1)
     save.save_image(gt, output_image, "test_A2I")
+    save.save_mel_onlyGT(lms.cpu().detach().numpy(), "test_A2I", label.cpu().detach().numpy())
     save.save_log(log)
     print(log)
 
