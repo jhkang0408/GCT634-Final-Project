@@ -119,7 +119,7 @@ if __name__ == '__main__':
     #save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), 1, label.cpu().detach().numpy())
 
     save.save_model(model, "test_I2A")
-    save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), "test_I2A", label.cpu().detach().numpy())
+    #save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), "test_I2A", label.cpu().detach().numpy())
     save.save_log(log)
     print(log)
 
