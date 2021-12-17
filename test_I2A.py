@@ -55,12 +55,12 @@ class Runner(object):
             lms = lms.to(self.device)
             label = label.to(self.device)
    
-            output, mean, std, class_pred,latent = self.model(image, label)
+            output, mean, std, class_pred,latent, f_latent = self.model(image, label)
 
             batch_size = image.shape[0]
             #visualize latent space
             if show_latent:
-                with_c=True #True
+                with_c=False #True
                 mode = "TEST_I2A"
                 latent_result, save_label = show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader, batch_size,latent_result, save_label)
 
@@ -117,6 +117,9 @@ if __name__ == '__main__':
     log = "[Test Loss: %.4f]" % (test_loss)
         
     #save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), 1, label.cpu().detach().numpy())
+
+    save.save_model(model, "test_I2A")
+    save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), "test_I2A", label.cpu().detach().numpy())
     save.save_log(log)
     print(log)
 

@@ -89,7 +89,8 @@ class SaveUtils():
             plt.clim(-100, 52)
             plt.axis('off')
             plt.title(instruments[label[i]], fontsize=25)
-            plt.savefig(self.save_dir_image +'/'+ str(i)+'fake.png')  
+            plt.savefig(self.save_dir_image +'/'+ str(i)+'fake.png')
+            plt.clf()  
             
         fake_images = [Image.open(self.save_dir_image +'/'+ str(x)+'fake.png') for x in range(batch_size)]
         widths, heights = zip(*(i.size for i in fake_images))

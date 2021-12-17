@@ -65,14 +65,15 @@ class Runner(object):
             lms = lms.to(self.device)
             label = label.to(self.device)
 
-            output, mean, std, class_pred, latent = self.model(lms, label)
+            output, mean, std, class_pred, latent, f_latent = self.model(lms, label)
 
             batch_size = image.shape[0]
             #visualize latent space
             if show_latent:
-                with_c=True
+                with_c=False
                 mode = "TEST_A2I"
                 latent_result, save_label = show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader, batch_size,latent_result, save_label)
+
             # real image
             output_real = self.ImageDiscrimitor(image)
             true_labels = Variable(torch.ones_like(output_real))
@@ -136,7 +137,8 @@ if __name__ == '__main__':
     test_loss, output_image, gt = runner.test(test_dataloader, args.pth)
     log = "[Test Loss: %.4f]" % (test_loss)
     
-    save.save_image(gt, output_image, "test")
+    save.save_model(model, 1)
+    save.save_image(gt, output_image, "test_A2I")
     save.save_log(log)
     print(log)
 

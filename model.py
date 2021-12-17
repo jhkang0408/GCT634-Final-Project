@@ -124,12 +124,12 @@ class AudioEncoder(nn.Module):
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
-        x = self.final_fc(x.flatten(-2))
+        x_1 = self.final_fc(x.flatten(-2))
 
-        class_pred = self.classification_branch(x)
-        x = torch.cat([x, class_pred.unsqueeze(-1)], 1) #add class information
+        class_pred = self.classification_branch(x_1)
+        x = torch.cat([x_1, class_pred.unsqueeze(-1)], 1) #add class information
 
-        return self.linear_mean(x.squeeze(-1).squeeze(-1)), self.linear_std(x.squeeze(-1).squeeze(-1)), class_pred 
+        return self.linear_mean(x.squeeze(-1).squeeze(-1)), self.linear_std(x.squeeze(-1).squeeze(-1)), class_pred, x_1.squeeze(-1)
         
 class ImageEncoder(nn.Module):
     def __init__(self):
@@ -149,10 +149,10 @@ class ImageEncoder(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
         x = self.layer5(x)
-        x = self.final_fc(x.flatten(-2))
-        class_pred = self.classification_branch(x)
-        x = torch.cat([x, class_pred.unsqueeze(-1)], 1)
-        return self.linear_mean(x.squeeze(-1).squeeze(-1)), self.linear_std(x.squeeze(-1).squeeze(-1)), class_pred
+        x_1 = self.final_fc(x.flatten(-2))
+        class_pred = self.classification_branch(x_1)
+        x = torch.cat([x_1, class_pred.unsqueeze(-1)], 1)
+        return self.linear_mean(x.squeeze(-1).squeeze(-1)), self.linear_std(x.squeeze(-1).squeeze(-1)), class_pred, x_1.squeeze(-1)
 
 # Decoder
 class AudioDecoder(nn.Module):
@@ -297,10 +297,10 @@ class Audio2ImageCVAE(nn.Module):
         return eps * std + mean
 
     def forward(self, x, c):
-        mean, logvar, class_pred = self.AudioEncoder(x, c)
+        mean, logvar, class_pred, f_latent = self.AudioEncoder(x, c)
         latent = self.sampling(mean, logvar)
         out = self.ImageDecoder(latent, class_pred)
-        return out, mean, logvar, class_pred, latent # torch.Size([3, 256, 256]) 
+        return out, mean, logvar, class_pred, latent, f_latent # torch.Size([3, 256, 256]) 
         
 class Image2AudioCVAE(nn.Module):
     def __init__(self):
@@ -318,10 +318,10 @@ class Image2AudioCVAE(nn.Module):
         return eps * std + mean
 
     def forward(self, x, c):
-        mean, logvar, class_pred = self.ImageEncoder(x, c)
+        mean, logvar, class_pred,f_latent = self.ImageEncoder(x, c)
         latent = self.sampling(mean, logvar)
         out = self.AudioDecoder(latent, class_pred)
-        return out, mean, logvar, class_pred, latent # torch.Size([3, 256, 256])
+        return out, mean, logvar, class_pred, latent, f_latent # torch.Size([3, 256, 256])
     
     
     

@@ -146,7 +146,7 @@ def get_dataloader(dataroot, batch_size):
     
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
 
     print("# of train_dataset:", len(train_dataset))
     print("# of valid_dataset:", len(valid_dataset))
