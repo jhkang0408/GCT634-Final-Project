@@ -82,7 +82,6 @@ class SubURMP(Dataset):
                 tuba:3285
                 viola:6530
                 violin:7430 
-
                 # Test
                 bassoon:390
                 cello:1030
@@ -131,15 +130,12 @@ class SubURMP(Dataset):
         label = torch.tensor(class_label).long()
         
         img = self.imgtransform(Image.open(img_path))
-        lms = torch.from_numpy(self.lms_std(np.load(lms_path)))
+        lms = torch.from_numpy(np.load(lms_path))
         
         return img, lms, label
     
     def __len__(self):
         return len(self.img_paths)
-        
-    def lms_std(self, lms): #MinMaxScaler
-        return (lms - (-100)) / (50 - (-100))
     
 
 def get_dataloader(dataroot, batch_size): 
