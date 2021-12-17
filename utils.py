@@ -124,14 +124,15 @@ def save_tsne_img(latent_result,save_label,img_name):
     tsne = TSNE(n_components=2, verbose=1, n_iter=300, init='pca',perplexity=5, method='barnes_hut')
     tsne_v = tsne.fit_transform(latent_result)
     #plot
-    plt.figure(figsize=(12, 13))  
+    fig =plt.figure(figsize=(12, 13))  
     instruments = ['bassoon', 'cello', 'clarinet', 'double_bass', 'flute', 'horn', 'oboe', 'sax', 'trombone', 'trumpet', 'tuba', 'viola', 'violin']
     scatter = plt.scatter(tsne_v[:, 0], tsne_v[:, 1],c=save_label, cmap=plt.cm.get_cmap('rainbow', class_num), s=50, label=instruments, alpha=0.95) 
-    plt.xlim([-20, 20])      
-    plt.ylim([-20, 20])    
+    plt.xlim([-25, 25])      
+    plt.ylim([-25, 25])    
     plt.legend(handles=scatter.legend_elements()[0], labels=instruments,loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=True, ncol=7)
     plt.savefig(save_name)
     print(save_name+"  saved image.")
+    plt.clf()
 
 def show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader,batch_size,latent_result, save_label):
     if iter == 0:

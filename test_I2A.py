@@ -45,7 +45,7 @@ class Runner(object):
 
         latent_result =[] #np.array([])
         save_label = []
-        show_latent=False 
+        show_latent=True
         
         #for item in pbar:
         for  iter, item in enumerate(dataloader):
@@ -60,7 +60,7 @@ class Runner(object):
             batch_size = image.shape[0]
             #visualize latent space
             if show_latent:
-                with_c=True
+                with_c=True #True
                 mode = "TEST_I2A"
                 latent_result, save_label = show_latent_space(iter, with_c, mode, latent, class_pred, label, dataloader, batch_size,latent_result, save_label)
 
@@ -80,7 +80,7 @@ class Runner(object):
 
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument('--pth', type=str, default="./weights/model_81.pt", help='directory of pth')
+parser.add_argument('--pth', type=str, default="./weights/model_72.pt", help='directory of pth')
 parser.add_argument('--name', type=str, default='./test_result/')
 parser.add_argument('--datasetPath', type=str, default='./dataset/') 
 parser.add_argument('--saveDir', type=str, default='./experiment')
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     test_loss, output_image, gt, label = runner.test(test_dataloader, args.pth)
     log = "[Test Loss: %.4f]" % (test_loss)
         
-    save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), epoch, label.cpu().detach().numpy())
+    #save.save_mel(gt.cpu().detach().numpy(), output_image.cpu().detach().numpy(), 1, label.cpu().detach().numpy())
     save.save_log(log)
     print(log)
 
