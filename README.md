@@ -25,7 +25,8 @@
 
 ## Visualization latent space:
 
-<img src="./figs/A2I_visualization.png" alt="A2I_visualization" style="zoom:40%;" /> <img src="C:\Users\rlgns\OneDrive\문서\GitHub\GCT634-Final_Project\figs\I2A_visualization.png" alt="I2A_visualization" style="zoom: 40%;" />
+
+<img src="./figs/A2I_visualization.png" alt="A2I_visualization" style="zoom:40%;" /> <img src="./figs/I2A_visualization.png" alt="I2A_visualization" style="zoom: 40%;" />
 
 
 
