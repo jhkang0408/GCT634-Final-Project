@@ -1,6 +1,6 @@
 
 
-## GENERATION TO ONE ANOTHER DOMAIN (A2I & I2A)
+## GENERATION TO ONE ANOTHER DOMAIN: Audio &harr; Image (Pytorch)
 ### GCT634-Final-Project
 ----------
 # Model structure(AC-VAE):
