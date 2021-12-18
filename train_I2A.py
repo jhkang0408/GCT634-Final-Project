@@ -153,9 +153,9 @@ if __name__ == '__main__':
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
-    from model import Image2AudioCVAE, AudioDiscrimitor
+    from model import Image2AudioACVAE, AudioDiscrimitor
     AudioDiscrimitor = AudioDiscrimitor()
-    model = Image2AudioCVAE()
+    model = Image2AudioACVAE()
     train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
 
     runner = Runner(model=model, AudioDiscrimitor=AudioDiscrimitor, lr = LR, sr = SR, save = save)

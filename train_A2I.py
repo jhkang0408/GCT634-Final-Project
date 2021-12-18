@@ -29,10 +29,7 @@ import utils
 from torch.autograd import Variable
 
 class Runner(object):
-    def __init__(self, model, ImageDiscrimitor,  lr, sr, save):
-        
-        
-
+    def __init__(self, model, ImageDiscrimitor,  lr, sr, save):               
         self.learning_rate = lr
         self.stopping_rate = sr
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -138,7 +135,7 @@ parser.add_argument('--name', type=str)
 parser.add_argument('--datasetPath', type=str, default='./dataset/') 
 parser.add_argument('--saveDir', type=str, default='./experiment')
 parser.add_argument('--gpu', type=str, default='0', help='gpu')
-parser.add_argument('--numEpoch', type=int, default=10, help='input batch size for training')
+parser.add_argument('--numEpoch', type=int, default=200, help='input batch size for training')
 parser.add_argument('--batchSize', type=int, default=16, help='input batch size for training')
 parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
 parser.add_argument('--sr', type=float, default=1e-6, help='stopping rate')
@@ -162,9 +159,9 @@ if __name__ == '__main__':
     #Logging setup.
     save = utils.SaveUtils(args, args.name)
 
-    from model import Audio2ImageCVAE, ImageDiscrimitor
+    from model import Audio2ImageACVAE, ImageDiscrimitor
     ImageDiscrimitor = ImageDiscrimitor()
-    model = Audio2ImageCVAE()
+    model = Audio2ImageACVAE()
     train_dataloader, valid_dataloader, test_dataloader = data_utils.get_dataloader(Dataset_Path, BATCH_SIZE)
 
     runner = Runner(model=model,ImageDiscrimitor = ImageDiscrimitor , lr = LR, sr = SR, save = save)
