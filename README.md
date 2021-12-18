@@ -1,7 +1,7 @@
 
 
-# Project Title
-### GCT634-Final-Project 
+# GENERATION TO ONE ANOTHER DOMAIN: AUDIO &harr IMAGE
+### GCT634-Final-Project
 ----------
 # Usage:
 First, put dataset in ```<Code_path>/dataset/```
