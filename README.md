@@ -3,7 +3,7 @@
 ## GENERATION TO ONE ANOTHER DOMAIN: Audio ⟷ Image (Pytorch)
 ### GCT634-Final-Project
 ----------
-# Model structure(AC-VAE):
+# Model structure(Adversarial Conditional VAE):
 
 
 
