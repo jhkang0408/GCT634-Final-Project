@@ -1,6 +1,6 @@
 
 
-# GENERATION TO ONE ANOTHER DOMAIN: AUDIO &harr IMAGE
+## GENERATION TO ONE ANOTHER DOMAIN (A2I & I2A)
 ### GCT634-Final-Project
 ----------
 # Usage:
