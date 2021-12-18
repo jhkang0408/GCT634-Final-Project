@@ -26,7 +26,7 @@
 ## Visualization latent space:
 
 
-<img src="./figs/A2I_visualization.png" alt="A2I_visualization" style="zoom:40%;" /> <img src="./figs/I2A_visualization.png" alt="I2A_visualization" style="zoom: 40%;" />
+<img src="./figs/A2I_visualization.png" alt="A2I_visualization" style="zoom:20%;" /> <img src="./figs/I2A_visualization.png" alt="I2A_visualization" style="zoom: 20%;" />
 
 
 
