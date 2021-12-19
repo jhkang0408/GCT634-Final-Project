@@ -12,14 +12,14 @@
 ## Results:
 
 ### Audio to Image:
-#### In Result(I2A) folder, you can find more results.
+#### In Result(A2I) folder, you can find more results.
 
 ![A2I_output](./figs/A2I_output.png)
 
 
 
 ### Image to Audio:
-#### In Result(A2I) folder, you can find more results.
+#### In Result(I2A) folder, you can find more results.
 
 ![I2A_output](./figs/I2A_output.png)
 
