@@ -1,7 +1,7 @@
 
 
 # GENERATION TO ONE ANOTHER DOMAIN: Audio ⟷ Image (Pytorch)
-### GCT634-Final-Project
+### 2021-fall-(GCT634/AI613)-KAIST Final Project
 ----------
 
 # Abstract
