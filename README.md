@@ -1,7 +1,7 @@
 
 
 # GENERATION TO ONE ANOTHER DOMAIN: Audio ⟷ Image (Pytorch)
-### 2021-fall-(GCT634/AI613)-KAIST Final Project
+
 
 [Report](https://github.com/rlgnswk/Generation-btw-Audio-Image/blob/main/2021_F_%20GCT634%20Final%20Project%20Report%20_Gihoon%20Kim%2C%20Jiho%20Kang%2C%20Hyunsong%20Kwon.pdf)
 
