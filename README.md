@@ -1,8 +1,26 @@
 
 
 # GENERATION TO ONE ANOTHER DOMAIN: Audio ⟷ Image (Pytorch)
-### GCT634-Final-Project
+
+
+[Report](https://github.com/rlgnswk/Generation-btw-Audio-Image/blob/main/2021_F_%20GCT634%20Final%20Project%20Report%20_Gihoon%20Kim%2C%20Jiho%20Kang%2C%20Hyunsong%20Kwon.pdf)
+
+[Presentation](https://www.youtube.com/watch?v=rglqt4LtvUY&list=PLgaQUWOjONyV9f1LK30reH6gCj14PcUot&index=2)
+
 ----------
+
+# Abstract
+
+In deep learning, research on the generation between the
+same domains has already shown excellent performance.
+However inter-domain generation research remains a challenging field, and there are still lot of studies about finding correlations between different modalities. Among
+these, we propose Adversarial Conditional VAE(AC-VAE)
+model which generates one modality(audio/visual) from
+the other modality(visual/audio) by utilizing the advantages of two representative generation methods and simple
+auxiliary classifier. In the experiments, the proposed model
+shows quite good results in both audio to image and image
+to audio generations. We report our results and discussion.
+
 ## Model structure: Adversarial Conditional VAE(AC-VAE):
 
 
